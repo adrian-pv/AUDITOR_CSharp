@@ -1,0 +1,73 @@
+{
+  "generado_en": "2026-09-04T20:14:39.123142+00:00",
+  "auditor": "Luis Adrián Pivaral Quiroa",
+  "stats": {
+    "loc_total": 75,
+    "vulnerabilidades": 5,
+    "densidad_errores": 6.67,
+    "score_gobierno": 90
+  },
+  "hallazgos": [
+    {
+      "id": "SEG-001",
+      "categoria": "Seguridad (OWASP)",
+      "modulo": "Módulo 1: Seguridad",
+      "severidad": "CRÍTICO",
+      "archivo": "Controllers/AuthController.cs",
+      "linea": 10,
+      "descripcion": "Se detectó un string asignado a 'AdminPassword' que contiene palabras clave de autenticación. Almacenar secretos en texto plano vulnera los estándares CWE-259 y OWASP Top 10.",
+      "recomendacion": "Mover la credencial hacia variables de entorno o appsettings.json encriptado.",
+      "estado": "Pendiente"
+    },
+    {
+      "id": "SEG-002",
+      "categoria": "Seguridad (OWASP)",
+      "modulo": "Módulo 1: Seguridad",
+      "severidad": "CRÍTICO",
+      "archivo": "Controllers/ProductController.cs",
+      "linea": 14,
+      "descripcion": "Se detectó una cadena SQL construida por concatenación directa de entrada de usuario (CWE-89, OWASP A03: Injection).",
+      "recomendacion": "Reemplazar la concatenación por SqlParameter o un ORM parametrizado (p. ej. Entity Framework).",
+      "estado": "Pendiente"
+    },
+    {
+      "id": "MEM-004",
+      "categoria": "Gestión de Memoria",
+      "modulo": "Módulo 3: Memoria",
+      "severidad": "ADVERTENCIA",
+      "archivo": "Data/DbContext.cs",
+      "linea": 9,
+      "descripcion": "'connection' de tipo SqlConnection implementa IDisposable pero ningún camino del flujo de control invoca Dispose() ni usa el bloque 'using'.",
+      "recomendacion": "Envolver la instancia en un bloque 'using' o declarar 'using var' en su creación.",
+      "estado": "Pendiente"
+    },
+    {
+      "id": "GOV-001",
+      "categoria": "Gobierno Estructural",
+      "modulo": "Módulo 4: Gobierno",
+      "severidad": "BAJO",
+      "archivo": "Models/UserModel.cs",
+      "linea": 6,
+      "descripcion": "La propiedad pública 'user_name' no sigue la convención PascalCase establecida por las guías de estilo de .NET.",
+      "recomendacion": "Renombrar siguiendo PascalCase (p. ej. 'UserName').",
+      "estado": "Pendiente"
+    },
+    {
+      "id": "PERF-001",
+      "categoria": "Rendimiento (.NET)",
+      "modulo": "Módulo 2: Rendimiento",
+      "severidad": "ADVERTENCIA",
+      "archivo": "Services/ReportService.cs",
+      "linea": 22,
+      "descripcion": "La variable local 'resumenTemporal' se declara pero nunca se vuelve a referenciar dentro de su bloque, lo que indica código muerto o un cálculo desechado.",
+      "recomendacion": "Eliminar la declaración o utilizar el resultado calculado.",
+      "estado": "Pendiente"
+    }
+  ],
+  "cumplimiento_por_modulo": {
+    "Módulo 1: Seguridad": 76,
+    "Módulo 2: Rendimiento": 94,
+    "Módulo 3: Memoria": 94,
+    "Módulo 4: Gobierno": 98
+  }
+}

@@ -1,0 +1,55 @@
+[
+  {
+    "file": "Controllers/AuthController.cs",
+    "loc": 21,
+    "declarations": [
+      {"kind": "field", "name": "AdminPassword", "type": "string", "modifiers": ["private", "const"], "line": 10}
+    ],
+    "literals": [
+      {"kind": "string", "value": "pruebas21_SecretPassword_2026", "line": 10, "assigned_to": "AdminPassword"}
+    ],
+    "invocations": [],
+    "disposables": []
+  },
+  {
+    "file": "Controllers/ProductController.cs",
+    "loc": 18,
+    "declarations": [],
+    "literals": [],
+    "invocations": [
+      {"method": "SqlCommand.ctor", "line": 14, "arguments_are_concatenated": true}
+    ],
+    "disposables": []
+  },
+  {
+    "file": "Data/DbContext.cs",
+    "loc": 15,
+    "declarations": [],
+    "literals": [],
+    "invocations": [],
+    "disposables": [
+      {"type": "SqlConnection", "variable": "connection", "line": 9, "wrapped_in_using": false, "disposed_explicitly": false}
+    ]
+  },
+  {
+    "file": "Models/UserModel.cs",
+    "loc": 9,
+    "declarations": [
+      {"kind": "property", "name": "user_name", "type": "string", "modifiers": ["public"], "line": 6},
+      {"kind": "property", "name": "UserId", "type": "int", "modifiers": ["public"], "line": 8}
+    ],
+    "literals": [],
+    "invocations": [],
+    "disposables": []
+  },
+  {
+    "file": "Services/ReportService.cs",
+    "loc": 12,
+    "declarations": [
+      {"kind": "variable", "name": "resumenTemporal", "type": "string", "line": 22, "used": false}
+    ],
+    "literals": [],
+    "invocations": [],
+    "disposables": []
+  }
+]
