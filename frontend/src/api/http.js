@@ -1,0 +1,84 @@
+/**
+ * Cliente HTTP común: agrega el token de sesión a cada petición y
+ * traduce los errores del backend a mensajes legibles.
+ */
+
+const CLAVE_TOKEN = "auditor_token";
+let alExpirarSesion = () => {};
+
+export function getToken() {
+  try {
+    return localStorage.getItem(CLAVE_TOKEN);
+  } catch {
+    return null;
+  }
+}
+
+export function setToken(token) {
+  try {
+    if (token) localStorage.setItem(CLAVE_TOKEN, token);
+    else localStorage.removeItem(CLAVE_TOKEN);
+  } catch {
+    /* almacenamiento no disponible: la sesión dura lo que la pestaña */
+  }
+}
+
+/** AuthContext registra aquí qué hacer cuando el backend responde 401. */
+export function onSesionExpirada(fn) {
+  alExpirarSesion = fn;
+}
+
+export async function api(ruta, { method = "GET", body, form } = {}) {
+  const headers = {};
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+
+  let res;
+  try {
+    res = await fetch(ruta, {
+      method,
+      headers,
+      body: form ?? (body !== undefined ? JSON.stringify(body) : undefined),
+    });
+  } catch {
+    throw new Error(
+      "No se pudo conectar con el backend. ¿Está corriendo 'python server.py' en la carpeta backend/?"
+    );
+  }
+
+  if (res.status === 401 && token) {
+    alExpirarSesion();
+  }
+  if (res.status === 204) return null;
+
+  let data = null;
+  try {
+    data = await res.json();
+  } catch {
+    /* respuesta sin cuerpo JSON */
+  }
+
+  if (!res.ok) {
+    throw new Error(mensajeDeError(data) || `El servidor respondió con error ${res.status}`);
+  }
+  if (data && data.error) throw new Error(data.error);
+  return data;
+}
+
+function mensajeDeError(data) {
+  if (!data?.detail) return null;
+  if (typeof data.detail === "string") return data.detail;
+  // Errores de validación de FastAPI: lista de {loc, msg}
+  if (Array.isArray(data.detail)) {
+    return data.detail
+      .map((d) => {
+        const campo = d.loc?.[d.loc.length - 1];
+        if (d.type === "string_too_short") return `'${campo}' es demasiado corto (mín. ${d.ctx?.min_length}).`;
+        if (d.type === "string_pattern_mismatch") return `'${campo}' no tiene un formato válido.`;
+        return `${campo}: ${d.msg}`;
+      })
+      .join(" ");
+  }
+  return null;
+}

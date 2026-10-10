@@ -7,3 +7,5 @@ bin/
 obj/
 reporte.json
 backend/reports/
+backend/data/
+backend/.env

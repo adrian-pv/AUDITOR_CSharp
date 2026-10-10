@@ -1,7 +1,9 @@
+import { api } from "./http";
+
 /**
- * Carga inicial: siempre el reporte de muestra en /sample-data —
- * generado ejecutando el motor real contra un fixture de AST, no escrito
- * a mano. Sirve para ver la interfaz sin tener que analizar nada primero.
+ * Reporte de muestra en /sample-data — generado ejecutando el motor real
+ * contra un fixture de AST, no escrito a mano. Se muestra cuando el
+ * usuario todavía no tiene ningún reporte en su historial.
  */
 export async function fetchSampleReport() {
   const res = await fetch("/sample-data/report.sample.json");
@@ -9,39 +11,30 @@ export async function fetchSampleReport() {
 }
 
 /**
- * Envía los archivos .cs seleccionados en el navegador al backend
- * (backend/server.py) para que corra el motor real (Roslyn + reglas)
- * sobre ellos, y devuelve el reporte resultante.
- *
- * Requiere que `python server.py` esté corriendo en backend/ — si no,
- * lanza un error explicativo que la interfaz muestra directamente.
+ * Envía los archivos .cs de la carpeta elegida al backend, que corre el
+ * motor real (Roslyn + las reglas elegidas; todas por defecto), guarda el reporte en la base de
+ * datos a nombre del usuario con sesión, y lo devuelve.
  */
-export async function analyzeFolder(files) {
+export async function analyzeFolder(files, reglas = null) {
   const archivosCs = files.filter((f) => f.name.endsWith(".cs"));
-
   if (archivosCs.length === 0) {
     throw new Error("La carpeta seleccionada no contiene archivos .cs");
   }
 
-  const formData = new FormData();
+  const form = new FormData();
   for (const file of archivosCs) {
-    formData.append("archivos", file, file.webkitRelativePath || file.name);
+    form.append("archivos", file, file.webkitRelativePath || file.name);
   }
-
-  let res;
-  try {
-    res = await fetch("/api/analizar", { method: "POST", body: formData });
-  } catch {
-    throw new Error(
-      "No se pudo conectar con el backend. ¿Está corriendo 'python server.py' en la carpeta backend/?"
-    );
-  }
-
-  if (!res.ok) {
-    throw new Error(`El servidor respondió con error ${res.status}`);
-  }
-
-  const data = await res.json();
-  if (data.error) throw new Error(data.error);
-  return data;
+  // Sin lista = todas las reglas activas (comportamiento por defecto del backend).
+  if (reglas && reglas.length > 0) form.append("reglas", reglas.join(","));
+  return api("/api/analizar", { method: "POST", form });
 }
+
+export const listarReportes = () => api("/api/reportes");
+export const obtenerReporte = (reporteId) => api(`/api/reportes/${reporteId}`);
+export const evaluarHallazgo = (hallazgoId, estado) =>
+  api(`/api/hallazgos/${hallazgoId}`, { method: "PATCH", body: { estado } });
+
+/** El auditor guarda qué reglas (criterios) evaluar en un reporte. */
+export const guardarCriterios = (reporteId, evaluadas) =>
+  api(`/api/reportes/${reporteId}/criterios`, { method: "PUT", body: { evaluadas } });

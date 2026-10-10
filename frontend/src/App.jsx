@@ -1,33 +1,67 @@
 import { useEffect, useRef, useState } from "react";
 import { FolderSearch, Loader2 } from "lucide-react";
-import { fetchSampleReport, analyzeFolder } from "./api/reportClient";
+import { analyzeFolder, fetchSampleReport, listarReportes, obtenerReporte } from "./api/reportClient";
+import { useAuth } from "./auth/AuthContext";
 import Sidebar from "./components/Sidebar";
+import LoginView from "./components/LoginView";
 import DashboardView from "./components/DashboardView";
 import AnalyzerView from "./components/AnalyzerView";
 import RulesView from "./components/RulesView";
+import HistoryView, { formatearFecha } from "./components/HistoryView";
+import ProfileView from "./components/ProfileView";
+import UsersView from "./components/UsersView";
+import AnalyzeDialog from "./components/AnalyzeDialog";
 
-function formatearFecha(iso) {
-  if (!iso) return "";
-  return new Date(iso).toLocaleString("es-GT", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+const TITULOS = {
+  dashboard: "Panel General",
+  analyzer: "Analizador",
+  history: "Historial de reportes",
+  rules: "Reglas y Políticas",
+  users: "Usuarios",
+  profile: "Mi perfil",
+};
+
+// Vistas que muestran el reporte abierto (las demás no necesitan la etiqueta del reporte).
+const VISTAS_DE_REPORTE = new Set(["dashboard", "analyzer"]);
 
 export default function App() {
+  const { usuario, cargando } = useAuth();
+
+  if (cargando) {
+    return (
+      <div className="h-screen flex items-center justify-center text-stone-400 text-sm">Cargando…</div>
+    );
+  }
+  if (!usuario) return <LoginView />;
+  // key: al cambiar de usuario se reinicia todo el estado de la aplicación.
+  return <Workspace key={usuario.id} />;
+}
+
+function Workspace() {
+  const { puedeAnalizar } = useAuth();
   const [view, setView] = useState("dashboard");
   const [report, setReport] = useState(null);
   const [openFile, setOpenFile] = useState(null);
-  const [esReporteReal, setEsReporteReal] = useState(false);
   const [analizando, setAnalizando] = useState(false);
   const [error, setError] = useState(null);
+  const [dialogoAbierto, setDialogoAbierto] = useState(false);
+  const reglasElegidas = useRef(null);
   const folderInputRef = useRef(null);
 
+  // Al entrar: el reporte más reciente del historial; si no hay, el de muestra.
   useEffect(() => {
-    fetchSampleReport().then(setReport);
+    (async () => {
+      try {
+        const historial = await listarReportes();
+        if (historial.length > 0) {
+          setReport(await obtenerReporte(historial[0].reporte_id));
+          return;
+        }
+      } catch (err) {
+        setError(err.message);
+      }
+      setReport(await fetchSampleReport());
+    })();
   }, []);
 
   const goToFile = (archivo) => {
@@ -35,8 +69,32 @@ export default function App() {
     setView("analyzer");
   };
 
+  const abrirReporte = async (reporteId) => {
+    setError(null);
+    try {
+      setReport(await obtenerReporte(reporteId));
+      setOpenFile(null);
+      setView("dashboard");
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const onHallazgoEvaluado = (hallazgoId, estado) =>
+    setReport((r) => ({
+      ...r,
+      hallazgos: r.hallazgos.map((h) => (h.hallazgo_id === hallazgoId ? { ...h, estado } : h)),
+    }));
+
+  // 1) diálogo de reglas (todas marcadas)  2) selector de carpeta  3) análisis
   const elegirCarpeta = () => {
     setError(null);
+    setDialogoAbierto(true);
+  };
+
+  const onReglasElegidas = (reglas) => {
+    reglasElegidas.current = reglas;
+    setDialogoAbierto(false);
     folderInputRef.current?.click();
   };
 
@@ -48,9 +106,7 @@ export default function App() {
     setAnalizando(true);
     setError(null);
     try {
-      const nuevoReporte = await analyzeFolder(files);
-      setReport(nuevoReporte);
-      setEsReporteReal(true);
+      setReport(await analyzeFolder(files, reglasElegidas.current));
       setOpenFile(null);
       setView("dashboard");
     } catch (err) {
@@ -60,48 +116,40 @@ export default function App() {
     }
   };
 
-  if (!report) {
-    return (
-      <div className="h-screen flex items-center justify-center text-stone-400 text-sm">
-        Cargando reporte…
-      </div>
-    );
-  }
+  const esReal = Boolean(report?.reporte_id);
 
   return (
     <div className="h-screen flex bg-stone-50">
-      <Sidebar active={view} onNavigate={setView} auditor={report.auditor} />
+      <Sidebar active={view} onNavigate={setView} />
       <main className="flex-1 overflow-y-auto">
-        <header className="h-14 border-b border-stone-200 flex items-center justify-between px-8">
-          <div className="flex items-center gap-3">
-            <h1 className="text-[13px] text-stone-500">
-              Sistema de Gobierno de Código Automático
-            </h1>
-            <span
-              className={`text-[10px] px-1.5 py-0.5 rounded ${
-                esReporteReal
-                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                  : "bg-stone-100 text-stone-500 border border-stone-200"
-              }`}
-            >
-              {esReporteReal
-                ? `Análisis real — ${report.proyecto} · ${formatearFecha(report.generado_en)}`
-                : "Reporte de muestra"}
-            </span>
+        <header className="h-14 border-b border-stone-200 flex items-center justify-between px-8 gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <h1 className="text-[13px] text-stone-900 font-medium shrink-0">{TITULOS[view]}</h1>
+            {report && VISTAS_DE_REPORTE.has(view) && (
+              <span
+                className={`text-[10.5px] px-1.5 py-0.5 rounded truncate ${
+                  esReal
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                    : "bg-stone-100 text-stone-500 border border-stone-200"
+                }`}
+              >
+                {esReal
+                  ? `${report.proyecto} · ${formatearFecha(report.generado_en)} · ${report.generado_por}`
+                  : "Reporte de muestra"}
+              </span>
+            )}
           </div>
 
-          <button
-            onClick={elegirCarpeta}
-            disabled={analizando}
-            className="flex items-center gap-2 text-[12.5px] px-3 py-1.5 rounded-md border border-stone-300 text-stone-700 hover:bg-stone-100 disabled:opacity-50"
-          >
-            {analizando ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <FolderSearch size={14} />
-            )}
-            {analizando ? "Analizando…" : "Analizar carpeta…"}
-          </button>
+          {puedeAnalizar && (
+            <button
+              onClick={elegirCarpeta}
+              disabled={analizando}
+              className="shrink-0 flex items-center gap-2 text-[12.5px] px-3 py-1.5 rounded-md border border-stone-300 text-stone-700 hover:bg-stone-100 disabled:opacity-50"
+            >
+              {analizando ? <Loader2 size={14} className="animate-spin" /> : <FolderSearch size={14} />}
+              {analizando ? "Analizando…" : "Analizar carpeta…"}
+            </button>
+          )}
 
           {/* input oculto: 'webkitdirectory' permite elegir una carpeta completa */}
           <input
@@ -121,11 +169,29 @@ export default function App() {
           </div>
         )}
 
-        {view === "dashboard" && <DashboardView report={report} onOpenFile={goToFile} />}
-        {view === "analyzer" && (
-          <AnalyzerView report={report} openFile={openFile} onSelectFile={setOpenFile} />
+        {!report && VISTAS_DE_REPORTE.has(view) && (
+          <div className="p-8 text-stone-400 text-sm">Cargando reporte…</div>
         )}
+        {report && view === "dashboard" && (
+          <DashboardView report={report} onOpenFile={goToFile} onReporteActualizado={setReport} />
+        )}
+        {report && view === "analyzer" && (
+          <AnalyzerView
+            key={report.reporte_id || "muestra"}
+            report={report}
+            openFile={openFile}
+            onSelectFile={setOpenFile}
+            onHallazgoEvaluado={onHallazgoEvaluado}
+          />
+        )}
+        {view === "history" && <HistoryView reporteActual={report?.reporte_id} onAbrir={abrirReporte} />}
         {view === "rules" && <RulesView />}
+        {view === "users" && <UsersView />}
+        {view === "profile" && <ProfileView />}
+
+        {dialogoAbierto && (
+          <AnalyzeDialog onCancelar={() => setDialogoAbierto(false)} onContinuar={onReglasElegidas} />
+        )}
       </main>
     </div>
   );

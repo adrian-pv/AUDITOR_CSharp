@@ -48,42 +48,47 @@ def run_engine(ast_files: list[dict], reglas: list | None = None) -> dict:
             findings.extend(regla.analyze(ast_file))
 
     loc_total = sum(f.get("loc", 0) for f in ast_files)
-    densidad = round((len(findings) / loc_total) * 100, 2) if loc_total else 0.0
+    hallazgos = [_finding_to_dict(f) for f in findings]
+    modulos = {r.modulo for r in reglas}
+    return {**calcular_metricas(hallazgos, loc_total, modulos), "hallazgos": hallazgos}
 
-    cumplimiento_por_modulo = _cumplimiento_por_modulo(findings)
-    score_gobierno = _score_gobierno(cumplimiento_por_modulo)
+
+PESO_SEVERIDAD = {"CRÍTICO": 12, "ADVERTENCIA": 6, "BAJO": 2}
+
+
+def calcular_metricas(hallazgos: list[dict], loc_total: int, modulos: set[str] | None = None) -> dict:
+    """
+    Métricas del panel a partir de una lista de hallazgos ({"modulo", "severidad", ...}).
+
+    `modulos` son los módulos que tienen al menos una regla aplicada: solo esos
+    reciben porcentaje de cumplimiento (un módulo sin reglas evaluadas no puede
+    marcar 100% por omisión). Se usa tanto al terminar un análisis como cuando el
+    auditor elige qué criterios evaluar en un reporte ya generado.
+    """
+    modulos = set(MODULOS) if modulos is None else modulos
+    densidad = round((len(hallazgos) / loc_total) * 100, 2) if loc_total else 0.0
+
+    # Cumplimiento heurístico por módulo: 100% menos una penalización por
+    # hallazgo, ponderada por severidad (sección 3.4, criterios de severidad).
+    cumplimiento = {}
+    for modulo in MODULOS:
+        if modulo not in modulos:
+            continue
+        penalizacion = sum(PESO_SEVERIDAD.get(h["severidad"], 4) for h in hallazgos if h["modulo"] == modulo)
+        cumplimiento[modulo] = max(0, 100 - penalizacion)
+
+    valores = list(cumplimiento.values())
+    score = round(sum(valores) / len(valores)) if valores else 100
 
     return {
         "stats": {
             "loc_total": loc_total,
-            "vulnerabilidades": len(findings),
+            "vulnerabilidades": len(hallazgos),
             "densidad_errores": densidad,
-            "score_gobierno": score_gobierno,
+            "score_gobierno": score,
         },
-        "hallazgos": [_finding_to_dict(f) for f in findings],
-        "cumplimiento_por_modulo": cumplimiento_por_modulo,
+        "cumplimiento_por_modulo": cumplimiento,
     }
-
-
-def _cumplimiento_por_modulo(findings: list[Finding]) -> dict:
-    """
-    Cumplimiento heurístico por módulo: 100% menos una penalización por
-    hallazgo, ponderada por severidad (ver sección 3.4, criterios de
-    severidad, del documento).
-    """
-    peso = {"CRÍTICO": 12, "ADVERTENCIA": 6, "BAJO": 2}
-    resultado = {}
-    for modulo in MODULOS:
-        penalizacion = sum(
-            peso.get(f.severidad.value, 4) for f in findings if f.modulo == modulo
-        )
-        resultado[modulo] = max(0, 100 - penalizacion)
-    return resultado
-
-
-def _score_gobierno(cumplimiento_por_modulo: dict) -> int:
-    valores = list(cumplimiento_por_modulo.values())
-    return round(sum(valores) / len(valores)) if valores else 100
 
 
 def _finding_to_dict(f: Finding) -> dict:

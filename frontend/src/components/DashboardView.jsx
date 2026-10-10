@@ -1,3 +1,5 @@
+import CriteriaPanel from "./CriteriaPanel";
+
 const SEVERITY_DOT = {
   CRÍTICO: "bg-red-500",
   ADVERTENCIA: "bg-amber-500",
@@ -10,7 +12,7 @@ const SEVERITY_TEXT = {
   BAJO: "text-stone-500",
 };
 
-export default function DashboardView({ report, onOpenFile }) {
+export default function DashboardView({ report, onOpenFile, onReporteActualizado }) {
   const { stats, hallazgos, cumplimiento_por_modulo } = report;
 
   const statCards = [
@@ -31,14 +33,19 @@ export default function DashboardView({ report, onOpenFile }) {
         ))}
       </div>
 
+      <CriteriaPanel report={report} onActualizado={onReporteActualizado} />
+
       <section>
         <h2 className="text-[13px] font-medium text-stone-900 mb-3">
           Hallazgos recientes
         </h2>
         <div className="border border-stone-200 rounded-lg divide-y divide-stone-200 bg-white">
+          {hallazgos.length === 0 && (
+            <p className="px-4 py-3 text-[12.5px] text-stone-500">Sin hallazgos para los criterios seleccionados.</p>
+          )}
           {hallazgos.map((h) => (
             <button
-              key={`${h.id}-${h.linea}`}
+              key={h.hallazgo_id ?? `${h.id}-${h.linea}`}
               onClick={() => onOpenFile(h.archivo)}
               className="w-full flex items-center gap-4 px-4 py-3 text-left hover:bg-stone-50"
             >

@@ -16,11 +16,16 @@ auditor-csharp-tool/
 ├── backend/            Motor de reglas en Python
 │   ├── engine/          Orquestador, puente a Roslyn, clases base, reporte
 │   ├── modules/          Una carpeta por módulo (seguridad, rendimiento, memoria, gobierno)
+│   ├── api/              Endpoints HTTP: autenticación, usuarios, reglas, análisis/reportes
+│   ├── autenticacion/    Hash de contraseñas (scrypt) y sesiones con JWT
+│   ├── persistencia/     Base de datos: Usuario, Proyecto, Reporte, Hallazgo, Regla
+│   ├── server.py         Servidor API (FastAPI)
 │   ├── tests/            Pruebas unitarias + fixture de AST de ejemplo
 │   └── main.py           CLI: `python main.py <ruta-solucion> --out reporte.json`
 ├── roslyn-bridge/      Puente en C#/.NET que expone el AST de Roslyn como JSON
 ├── frontend/           Interfaz web (React + Vite + Tailwind)
-│   ├── src/components/   Sidebar, Panel General, Analizador, Reglas y Políticas
+│   ├── src/auth/         Sesión del usuario (AuthContext)
+│   ├── src/components/   Login, Panel General, Analizador, Historial, Reglas, Usuarios, Mi perfil
 │   └── sample-data/      report.sample.json — generado por el motor real, no escrito a mano
 └── docs/
     └── arquitectura.md  Cómo cada carpeta corresponde a las secciones del documento
@@ -51,6 +56,51 @@ python -m pytest tests/ -v        # corre el motor contra el fixture de ejemplo
 python server.py                  # levanta el servidor en http://127.0.0.1:8000
 ```
 
+La base de datos es **PostgreSQL**. Antes de arrancar el servidor, copie
+`backend/.env.example` como `backend/.env` y escriba ahí la cadena de
+conexión (`AUDITOR_DB_URL=postgresql://...`). El archivo `.env` no se sube al
+repositorio. Luego cree las tablas una sola vez:
+
+```bash
+python crear_bd.py      # ejecuta backend/sql/esquema_postgresql.sql (solo crea lo que falte)
+```
+
+(si las tablas no existen, `server.py` también las crea por sí solo).
+
+La primera vez que arranca, `server.py` carga el catálogo de reglas y crea un
+**Administrador inicial**, y lo muestra en consola:
+
+```
+correo:     admin@auditor.local
+contraseña: admin123
+```
+
+Inicie sesión con esa cuenta, cambie la contraseña en **Mi perfil** y cree
+los demás usuarios en **Usuarios**. Sin `backend/.env` el servidor usa un archivo SQLite local
+(`backend/data/`), pensado solo para pruebas.
+
+Variables de entorno opcionales:
+
+| Variable | Para qué |
+|---|---|
+| `AUDITOR_DB_URL` | Cadena de conexión de PostgreSQL (en `backend/.env`) |
+| `AUDITOR_ADMIN_PASSWORD` | Contraseña del Administrador inicial |
+| `AUDITOR_SECRET` | Clave para firmar las sesiones (si no, se genera en `backend/data/.secret`) |
+
+Documentación interactiva de la API: http://127.0.0.1:8000/docs
+
+### Usuarios y roles
+
+| Rol | Qué puede hacer |
+|---|---|
+| **Administrador** | Gestiona usuarios y activa/desactiva reglas; también puede analizar y evaluar |
+| **Desarrollador** | Analiza carpetas de código (todas las reglas activas por defecto; puede quitar algunas antes de analizar); ve solo su propio historial |
+| **Auditor** | No ejecuta análisis: revisa los reportes de todos los desarrolladores, elige qué reglas (criterios) evaluar en cada reporte —el panel y el score se recalculan y la selección queda guardada— y evalúa cada hallazgo (Pendiente / Solucionado / Fallido) |
+
+Cada reporte guardado (en la base de datos y como `.json`) solo lleva el
+`usuario_id` de quien lo generó y un `reporte_id` único, junto con la fecha y
+hora — no datos personales.
+
 `server.py` es lo que conecta el frontend con el motor real: recibe los
 archivos `.cs` que el usuario elige desde el navegador, los analiza con
 `roslyn-bridge` + las reglas de `backend/modules/`, y devuelve el reporte.
@@ -74,12 +124,14 @@ npm install
 npm run dev
 ```
 
-Al abrir la interfaz verás el reporte de muestra (etiqueta "Reporte de
-muestra" junto al título). El botón **"Analizar carpeta…"** de la
+Al abrir la interfaz aparece la pantalla de inicio de sesión. Después de
+entrar verás tu reporte más reciente, o el reporte de muestra si todavía no
+tienes ninguno. El botón **"Analizar carpeta…"** de la
 cabecera abre el explorador de archivos de Windows para elegir una
 carpeta con código C#; al seleccionarla, el frontend se la envía al
 backend, corre el motor real, y reemplaza la vista con esos hallazgos
-(etiqueta "Análisis real — <nombre de la carpeta> · <fecha y hora>").
+(etiqueta "<proyecto> · <fecha y hora> · <usuario>") y lo guarda en el
+**Historial**.
 
 Cada análisis real que corres desde la interfaz también se guarda en
 `backend/reports/`, con nombre `reporte_<nombre-carpeta>_<AAAAMMDD_HHMMSS>.json`

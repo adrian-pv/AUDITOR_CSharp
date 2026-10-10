@@ -1,5 +1,9 @@
 import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, FileCode2 } from "lucide-react";
+import { evaluarHallazgo } from "../api/reportClient";
+import { useAuth } from "../auth/AuthContext";
+
+const ESTADOS = ["Pendiente", "Solucionado", "Fallido"];
 
 const SEVERITY_TEXT = {
   CRÍTICO: "text-red-700 bg-red-50 border-red-200",
@@ -7,7 +11,22 @@ const SEVERITY_TEXT = {
   BAJO: "text-stone-600 bg-stone-100 border-stone-200",
 };
 
-export default function AnalyzerView({ report, openFile, onSelectFile }) {
+export default function AnalyzerView({ report, openFile, onSelectFile, onHallazgoEvaluado }) {
+  const { puedeEvaluar } = useAuth();
+  const [errorEval, setErrorEval] = useState(null);
+  // Solo los reportes guardados en la BD tienen hallazgo_id (el de muestra no).
+  const evaluable = puedeEvaluar && report.reporte_id;
+
+  const cambiarEstado = async (h, estado) => {
+    setErrorEval(null);
+    try {
+      await evaluarHallazgo(h.hallazgo_id, estado);
+      onHallazgoEvaluado?.(h.hallazgo_id, estado);
+    } catch (err) {
+      setErrorEval(err.message);
+    }
+  };
+
   const archivosConHallazgos = useMemo(() => {
     const porArchivo = new Map();
     for (const h of report.hallazgos) {
@@ -29,8 +48,14 @@ export default function AnalyzerView({ report, openFile, onSelectFile }) {
     <div className="p-8 max-w-5xl">
       <p className="text-[13px] text-stone-500 mb-4">
         {archivosConHallazgos.size} archivo(s) con hallazgos activos, de la solución
-        <span className="font-mono text-stone-700"> AtuneraPacifico</span>
+        <span className="font-mono text-stone-700"> {report.proyecto || "AtuneraPacifico"}</span>
       </p>
+
+      {errorEval && (
+        <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-2.5 text-[12.5px] text-red-700">
+          {errorEval}
+        </div>
+      )}
 
       <div className="border border-stone-200 rounded-lg divide-y divide-stone-200 bg-white">
         {[...archivosConHallazgos.entries()].map(([archivo, hallazgos]) => {
@@ -57,7 +82,7 @@ export default function AnalyzerView({ report, openFile, onSelectFile }) {
                 <div className="px-4 pb-4 pl-10 space-y-3">
                   {hallazgos.map((h) => (
                     <div
-                      key={`${h.id}-${h.linea}`}
+                      key={h.hallazgo_id ?? `${h.id}-${h.linea}`}
                       className={`rounded-md border px-3 py-2.5 ${SEVERITY_TEXT[h.severidad]}`}
                     >
                       <div className="flex items-center gap-2 text-[12px] font-medium">
@@ -73,6 +98,22 @@ export default function AnalyzerView({ report, openFile, onSelectFile }) {
                         <span className="font-medium">Recomendación: </span>
                         {h.recomendacion}
                       </p>
+                      <div className="mt-2 flex items-center gap-2 text-[11.5px] text-stone-500">
+                        Estado:
+                        {evaluable ? (
+                          <select
+                            value={h.estado}
+                            onChange={(e) => cambiarEstado(h, e.target.value)}
+                            className="h-7 rounded border border-stone-300 bg-white px-1.5 text-[11.5px] text-stone-700"
+                          >
+                            {ESTADOS.map((e) => (
+                              <option key={e}>{e}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="text-stone-700">{h.estado}</span>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

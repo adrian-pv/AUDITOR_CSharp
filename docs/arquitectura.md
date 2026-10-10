@@ -9,6 +9,10 @@
 | `backend/modules/gobierno/` | Reglas de Gobierno Estructural — Módulo 4 |
 | `backend/engine/orchestrator.py` | Cálculo de densidad de errores y score de gobierno (Anexo A1, panel general) |
 | `frontend/src/components/RulesView.jsx` | Filtro obligatorio de gobierno de código / Gatekeeper (Anexo A3) |
+| `backend/persistencia/modelos.py`, `backend/sql/esquema_postgresql.sql` | Modelo Entidad-Relación (Cap. V, Figuras 12 y 13): usuario, proyecto, reporte, hallazgo, regla en PostgreSQL |
+| `backend/autenticacion/` | Inicio de sesión y control de acceso por rol (Administrador, Desarrollador, Auditor — Cap. IV, 4.2) |
+| `backend/api/` | Casos de uso del Cap. V expuestos como endpoints HTTP |
+| `frontend/src/components/LoginView.jsx` | Pantalla de inicio de sesión (Figura de interfaz pendiente del Cap. V) |
 | `backend/tests/` | Validación del motor sin depender del SDK de .NET instalado, para reproducibilidad en cualquier entorno de desarrollo |
 
 ## Próximos pasos sugeridos
@@ -18,8 +22,10 @@
    a `.Dispose()`).
 2. Ampliar `REGLAS_REGISTRADAS` en `backend/engine/orchestrator.py` hasta
    cubrir el catálogo completo de reglas heurísticas descrito en 3.4.
-3. Exponer `main.py` como un endpoint HTTP simple (FastAPI) para que el
-   frontend deje de depender del `report.sample.json` estático.
+3. ~~Exponer el motor como endpoint HTTP~~ — hecho (`server.py`).
+4. ~~Inicio de sesión, roles y base de datos~~ — hecho.
+5. Descargar el reporte como `.json` y cargar un `.json` de un tercero sin
+   volver a analizarlo ni guardarlo en la base de datos.
 
 ## Limitaciones conocidas del puente (análisis puramente sintáctico)
 
