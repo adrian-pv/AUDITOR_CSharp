@@ -59,6 +59,13 @@ export async function api(ruta, { method = "GET", body, form } = {}) {
     /* respuesta sin cuerpo JSON */
   }
 
+  // "Not Found" sin más detalle = la ruta no existe en el backend que está corriendo
+  // (normalmente porque se actualizó el código y no se reinició python server.py).
+  if (res.status === 404 && data?.detail === "Not Found") {
+    throw new Error(
+      "El backend no tiene esta función. Reinicie el servidor (Ctrl + C y 'python server.py' en la carpeta backend/) para cargar los cambios."
+    );
+  }
   if (!res.ok) {
     throw new Error(mensajeDeError(data) || `El servidor respondió con error ${res.status}`);
   }
