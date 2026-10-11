@@ -42,7 +42,9 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     Uuid,
+    false,
     func,
+    text,
     true,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -141,9 +143,17 @@ class Reporte(Base):
 
 
 SEVERIDADES = "('CRÍTICO','ADVERTENCIA','BAJO')"
+ESTADOS_HALLAZGO = ["Pendiente", "Solucionado", "Fallido"]
 
 
 class Regla(Base):
+    """
+    Regla del catálogo. Su lógica no está escrita en código: `tipo_deteccion`
+    elige uno de los detectores genéricos del motor (engine/detectores.py) y
+    `patrones`/`parametros` le dicen qué buscar. El Administrador puede
+    editarlos o crear reglas nuevas desde la interfaz.
+    """
+
     __tablename__ = "regla"
     __table_args__ = (CheckConstraint(f"severidad IN {SEVERIDADES}", name="ck_regla_severidad"),)
 
@@ -153,6 +163,19 @@ class Regla(Base):
     categoria: Mapped[str] = mapped_column(String(80))
     severidad: Mapped[str] = mapped_column(String(20))
     activa: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
+
+    tipo_deteccion: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    patrones: Mapped[list] = mapped_column(JSON_BINARIO, default=list, server_default=text("'[]'"))
+    parametros: Mapped[dict] = mapped_column(JSON_BINARIO, default=dict, server_default=text("'{}'"))
+    owasp_2021: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    owasp_2025: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    cwe: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    mensaje: Mapped[str | None] = mapped_column(Text, nullable=True)
+    recomendacion: Mapped[str | None] = mapped_column(Text, nullable=True)
+    predefinida: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    fecha_actualizacion: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_ahora, onupdate=_ahora, server_default=func.now()
+    )
 
     hallazgos: Mapped[list["Hallazgo"]] = relationship(back_populates="regla")
 

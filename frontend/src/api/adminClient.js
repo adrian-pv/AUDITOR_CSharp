@@ -10,3 +10,6 @@ export const modificarUsuario = (id, cambios) =>
 export const listarReglas = () => api("/api/reglas");
 export const cambiarRegla = (codigo, activa) =>
   api(`/api/reglas/${codigo}`, { method: "PATCH", body: { activa } });
+export const plantillasDeReglas = () => api("/api/reglas/plantillas");
+export const crearRegla = (datos) => api("/api/reglas", { method: "POST", body: datos });
+export const actualizarRegla = (codigo, datos) => api(`/api/reglas/${codigo}`, { method: "PUT", body: datos });

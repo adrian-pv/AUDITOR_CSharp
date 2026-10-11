@@ -89,6 +89,11 @@ export default function AnalyzerView({ report, openFile, onSelectFile, onHallazg
                         <span className="font-mono">{h.id}</span>
                         <span>·</span>
                         <span>línea {h.linea}</span>
+                        {[h.owasp_2021, h.owasp_2025, h.cwe].filter(Boolean).map((t) => (
+                          <span key={t} className="font-mono text-[10.5px] font-normal px-1.5 py-px rounded border border-current/20 bg-white/60">
+                            {t}
+                          </span>
+                        ))}
                         <span className="ml-auto text-[10.5px] uppercase tracking-wide">
                           {h.severidad}
                         </span>

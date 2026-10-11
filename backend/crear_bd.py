@@ -47,7 +47,7 @@ def main() -> None:
         if nuevas:
             print(f"Tablas creadas en {servidor}: {', '.join(nuevas)}")
         else:
-            print(f"Todas las tablas ya existían en {servidor}; no se hizo ningún cambio.")
+            print(f"Las tablas ya existían en {servidor}; solo se completó lo que faltaba (columnas y reglas nuevas).")
 
         for tabla in TABLAS:
             n = conn.execute(f"SELECT count(*) FROM {tabla}").fetchone()[0]

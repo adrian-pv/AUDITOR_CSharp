@@ -1,55 +1,1189 @@
 [
-  {
-    "file": "Controllers/AuthController.cs",
-    "loc": 21,
-    "declarations": [
-      {"kind": "field", "name": "AdminPassword", "type": "string", "modifiers": ["private", "const"], "line": 10}
+ {
+  "file": "Controllers/AuthController.cs",
+  "kind": "csharp",
+  "loc": 22,
+  "declarations": [
+   {
+    "kind": "field",
+    "name": "AdminPassword",
+    "type": "string",
+    "modifiers": [
+     "private",
+     "const"
     ],
-    "literals": [
-      {"kind": "string", "value": "pruebas21_SecretPassword_2026", "line": 10, "assigned_to": "AdminPassword"}
+    "line": 7
+   },
+   {
+    "kind": "field",
+    "name": "_logger",
+    "type": "ILogger<AuthController>",
+    "modifiers": [
+     "private",
+     "readonly"
     ],
-    "invocations": [],
-    "disposables": []
-  },
-  {
-    "file": "Controllers/ProductController.cs",
-    "loc": 18,
-    "declarations": [],
-    "literals": [],
-    "invocations": [
-      {"method": "SqlCommand.ctor", "line": 14, "arguments_are_concatenated": true}
-    ],
-    "disposables": []
-  },
-  {
-    "file": "Data/DbContext.cs",
-    "loc": 15,
-    "declarations": [],
-    "literals": [],
-    "invocations": [],
-    "disposables": [
-      {"type": "SqlConnection", "variable": "connection", "line": 9, "wrapped_in_using": false, "disposed_explicitly": false}
+    "line": 8
+   }
+  ],
+  "literals": [
+   {
+    "kind": "string",
+    "value": "pruebas21_SecretPassword_2026",
+    "line": 7,
+    "assigned_to": "AdminPassword"
+   },
+   {
+    "kind": "string",
+    "value": "Intento de login de ",
+    "line": 13,
+    "assigned_to": null
+   },
+   {
+    "kind": "string",
+    "value": " con clave ",
+    "line": 13,
+    "assigned_to": null
+   }
+  ],
+  "invocations": [
+   {
+    "kind": "call",
+    "name": "LogInformation",
+    "target": "_logger.LogInformation",
+    "line": 13,
+    "args": [
+     {
+      "text": "\"Intento de login de \" + usuario + \" con clave \" + password",
+      "name": null,
+      "literal": false,
+      "value": null,
+      "concatenated": true,
+      "dynamic": true,
+      "literal_parts": [
+       "Intento de login de ",
+       " con clave "
+      ]
+     }
     ]
-  },
-  {
-    "file": "Models/UserModel.cs",
-    "loc": 9,
-    "declarations": [
-      {"kind": "property", "name": "user_name", "type": "string", "modifiers": ["public"], "line": 6},
-      {"kind": "property", "name": "UserId", "type": "int", "modifiers": ["public"], "line": 8}
+   },
+   {
+    "kind": "call",
+    "name": "Ok",
+    "target": "Ok",
+    "line": 16,
+    "args": []
+   },
+   {
+    "kind": "call",
+    "name": "Unauthorized",
+    "target": "Unauthorized",
+    "line": 18,
+    "args": []
+   }
+  ],
+  "assignments": [],
+  "concatenations": [
+   {
+    "line": 13,
+    "text": "\"Intento de login de \" + usuario + \" con clave \" + password",
+    "literal_parts": [
+     "Intento de login de ",
+     " con clave "
     ],
-    "literals": [],
-    "invocations": [],
-    "disposables": []
-  },
-  {
-    "file": "Services/ReportService.cs",
-    "loc": 12,
-    "declarations": [
-      {"kind": "variable", "name": "resumenTemporal", "type": "string", "line": 22, "used": false}
+    "has_dynamic": true
+   }
+  ],
+  "classes": [
+   {
+    "name": "AuthController",
+    "line": 5,
+    "modifiers": [
+     "public"
     ],
-    "literals": [],
-    "invocations": [],
-    "disposables": []
-  }
+    "attributes": [],
+    "bases": [
+     "Controller"
+    ],
+    "methods": [
+     {
+      "name": "Login",
+      "line": 10,
+      "modifiers": [
+       "public"
+      ],
+      "attributes": [
+       "HttpPost"
+      ]
+     }
+    ]
+   }
+  ],
+  "catches": [],
+  "comparisons": [
+   {
+    "line": 14,
+    "op": "==",
+    "left": "password",
+    "right": "AdminPassword"
+   }
+  ],
+  "disposables": []
+ },
+ {
+  "file": "Controllers/ProductController.cs",
+  "kind": "csharp",
+  "loc": 49,
+  "declarations": [
+   {
+    "kind": "variable",
+    "name": "consulta",
+    "type": "var",
+    "modifiers": [],
+    "line": 12,
+    "used": true
+   },
+   {
+    "kind": "variable",
+    "name": "comando",
+    "type": "SqlCommand",
+    "modifiers": [],
+    "line": 13,
+    "used": true
+   },
+   {
+    "kind": "variable",
+    "name": "comando",
+    "type": "SqlCommand",
+    "modifiers": [],
+    "line": 19,
+    "used": true
+   },
+   {
+    "kind": "variable",
+    "name": "contenido",
+    "type": "var",
+    "modifiers": [],
+    "line": 26,
+    "used": true
+   },
+   {
+    "kind": "variable",
+    "name": "html",
+    "type": "var",
+    "modifiers": [],
+    "line": 32,
+    "used": true
+   }
+  ],
+  "literals": [
+   {
+    "kind": "string",
+    "value": "SELECT * FROM Productos WHERE Nombre = '",
+    "line": 12,
+    "assigned_to": null
+   },
+   {
+    "kind": "string",
+    "value": "'",
+    "line": 12,
+    "assigned_to": null
+   },
+   {
+    "kind": "string",
+    "value": "SELECT * FROM Productos WHERE Nombre = @nombre",
+    "line": 19,
+    "assigned_to": null
+   },
+   {
+    "kind": "string",
+    "value": "@nombre",
+    "line": 20,
+    "assigned_to": null
+   },
+   {
+    "kind": "string",
+    "value": "/var/reportes/",
+    "line": 26,
+    "assigned_to": null
+   },
+   {
+    "kind": "string",
+    "value": "cmd.exe",
+    "line": 38,
+    "assigned_to": null
+   },
+   {
+    "kind": "string",
+    "value": "/c exportar.bat ",
+    "line": 38,
+    "assigned_to": null
+   }
+  ],
+  "invocations": [
+   {
+    "kind": "call",
+    "name": "Ok",
+    "target": "Ok",
+    "line": 14,
+    "args": [
+     {
+      "text": "comando.ExecuteScalar()",
+      "name": null,
+      "literal": false,
+      "value": null,
+      "concatenated": false,
+      "dynamic": true,
+      "literal_parts": []
+     }
+    ]
+   },
+   {
+    "kind": "call",
+    "name": "ExecuteScalar",
+    "target": "comando.ExecuteScalar",
+    "line": 14,
+    "args": []
+   },
+   {
+    "kind": "call",
+    "name": "AddWithValue",
+    "target": "comando.Parameters.AddWithValue",
+    "line": 20,
+    "args": [
+     {
+      "text": "\"@nombre\"",
+      "name": null,
+      "literal": true,
+      "value": "@nombre",
+      "concatenated": false,
+      "dynamic": false,
+      "literal_parts": [
+       "@nombre"
+      ]
+     },
+     {
+      "text": "nombre",
+      "name": null,
+      "literal": false,
+      "value": null,
+      "concatenated": false,
+      "dynamic": true,
+      "literal_parts": []
+     }
+    ]
+   },
+   {
+    "kind": "call",
+    "name": "Ok",
+    "target": "Ok",
+    "line": 21,
+    "args": [
+     {
+      "text": "comando.ExecuteScalar()",
+      "name": null,
+      "literal": false,
+      "value": null,
+      "concatenated": false,
+      "dynamic": true,
+      "literal_parts": []
+     }
+    ]
+   },
+   {
+    "kind": "call",
+    "name": "ExecuteScalar",
+    "target": "comando.ExecuteScalar",
+    "line": 21,
+    "args": []
+   },
+   {
+    "kind": "call",
+    "name": "ReadAllText",
+    "target": "System.IO.File.ReadAllText",
+    "line": 26,
+    "args": [
+     {
+      "text": "\"/var/reportes/\" + archivo",
+      "name": null,
+      "literal": false,
+      "value": null,
+      "concatenated": true,
+      "dynamic": true,
+      "literal_parts": [
+       "/var/reportes/"
+      ]
+     }
+    ]
+   },
+   {
+    "kind": "call",
+    "name": "Content",
+    "target": "Content",
+    "line": 27,
+    "args": [
+     {
+      "text": "contenido",
+      "name": null,
+      "literal": false,
+      "value": null,
+      "concatenated": false,
+      "dynamic": true,
+      "literal_parts": []
+     }
+    ]
+   },
+   {
+    "kind": "call",
+    "name": "GetStringAsync",
+    "target": "cliente.GetStringAsync",
+    "line": 32,
+    "args": [
+     {
+      "text": "url",
+      "name": null,
+      "literal": false,
+      "value": null,
+      "concatenated": false,
+      "dynamic": true,
+      "literal_parts": []
+     }
+    ]
+   },
+   {
+    "kind": "call",
+    "name": "Content",
+    "target": "Content",
+    "line": 33,
+    "args": [
+     {
+      "text": "html",
+      "name": null,
+      "literal": false,
+      "value": null,
+      "concatenated": false,
+      "dynamic": true,
+      "literal_parts": []
+     }
+    ]
+   },
+   {
+    "kind": "call",
+    "name": "Start",
+    "target": "System.Diagnostics.Process.Start",
+    "line": 38,
+    "args": [
+     {
+      "text": "\"cmd.exe\"",
+      "name": null,
+      "literal": true,
+      "value": "cmd.exe",
+      "concatenated": false,
+      "dynamic": false,
+      "literal_parts": [
+       "cmd.exe"
+      ]
+     },
+     {
+      "text": "\"/c exportar.bat \" + formato",
+      "name": null,
+      "literal": false,
+      "value": null,
+      "concatenated": true,
+      "dynamic": true,
+      "literal_parts": [
+       "/c exportar.bat "
+      ]
+     }
+    ]
+   },
+   {
+    "kind": "call",
+    "name": "Ok",
+    "target": "Ok",
+    "line": 39,
+    "args": []
+   },
+   {
+    "kind": "call",
+    "name": "Ok",
+    "target": "Ok",
+    "line": 45,
+    "args": [
+     {
+      "text": "id",
+      "name": null,
+      "literal": false,
+      "value": null,
+      "concatenated": false,
+      "dynamic": true,
+      "literal_parts": []
+     }
+    ]
+   },
+   {
+    "kind": "new",
+    "name": "SqlCommand",
+    "target": "SqlCommand",
+    "line": 13,
+    "args": [
+     {
+      "text": "consulta",
+      "name": null,
+      "literal": false,
+      "value": null,
+      "concatenated": true,
+      "dynamic": true,
+      "literal_parts": [
+       "SELECT * FROM Productos WHERE Nombre = '",
+       "'"
+      ]
+     },
+     {
+      "text": "conexion",
+      "name": null,
+      "literal": false,
+      "value": null,
+      "concatenated": false,
+      "dynamic": true,
+      "literal_parts": []
+     }
+    ]
+   },
+   {
+    "kind": "new",
+    "name": "SqlCommand",
+    "target": "SqlCommand",
+    "line": 19,
+    "args": [
+     {
+      "text": "\"SELECT * FROM Productos WHERE Nombre = @nombre\"",
+      "name": null,
+      "literal": true,
+      "value": "SELECT * FROM Productos WHERE Nombre = @nombre",
+      "concatenated": false,
+      "dynamic": false,
+      "literal_parts": [
+       "SELECT * FROM Productos WHERE Nombre = @nombre"
+      ]
+     },
+     {
+      "text": "conexion",
+      "name": null,
+      "literal": false,
+      "value": null,
+      "concatenated": false,
+      "dynamic": true,
+      "literal_parts": []
+     }
+    ]
+   }
+  ],
+  "assignments": [],
+  "concatenations": [
+   {
+    "line": 12,
+    "text": "\"SELECT * FROM Productos WHERE Nombre = '\" + nombre + \"'\"",
+    "literal_parts": [
+     "SELECT * FROM Productos WHERE Nombre = '",
+     "'"
+    ],
+    "has_dynamic": true
+   },
+   {
+    "line": 26,
+    "text": "\"/var/reportes/\" + archivo",
+    "literal_parts": [
+     "/var/reportes/"
+    ],
+    "has_dynamic": true
+   },
+   {
+    "line": 38,
+    "text": "\"/c exportar.bat \" + formato",
+    "literal_parts": [
+     "/c exportar.bat "
+    ],
+    "has_dynamic": true
+   }
+  ],
+  "classes": [
+   {
+    "name": "ProductController",
+    "line": 7,
+    "modifiers": [
+     "public"
+    ],
+    "attributes": [
+     "Authorize"
+    ],
+    "bases": [
+     "Controller"
+    ],
+    "methods": [
+     {
+      "name": "Buscar",
+      "line": 10,
+      "modifiers": [
+       "public"
+      ],
+      "attributes": []
+     },
+     {
+      "name": "BuscarSeguro",
+      "line": 17,
+      "modifiers": [
+       "public"
+      ],
+      "attributes": []
+     },
+     {
+      "name": "Descargar",
+      "line": 24,
+      "modifiers": [
+       "public"
+      ],
+      "attributes": []
+     },
+     {
+      "name": "Vista",
+      "line": 30,
+      "modifiers": [
+       "public",
+       "async"
+      ],
+      "attributes": []
+     },
+     {
+      "name": "Exportar",
+      "line": 36,
+      "modifiers": [
+       "public"
+      ],
+      "attributes": []
+     },
+     {
+      "name": "Eliminar",
+      "line": 42,
+      "modifiers": [
+       "public"
+      ],
+      "attributes": [
+       "HttpPost"
+      ]
+     }
+    ]
+   }
+  ],
+  "catches": [],
+  "comparisons": [],
+  "disposables": [
+   {
+    "type": "SqlCommand",
+    "variable": "comando",
+    "line": 13,
+    "wrapped_in_using": false,
+    "disposed_explicitly": false
+   },
+   {
+    "type": "SqlCommand",
+    "variable": "comando",
+    "line": 19,
+    "wrapped_in_using": true,
+    "disposed_explicitly": false
+   }
+  ]
+ },
+ {
+  "file": "Data/DbContext.cs",
+  "kind": "csharp",
+  "loc": 34,
+  "declarations": [
+   {
+    "kind": "variable",
+    "name": "connection",
+    "type": "SqlConnection",
+    "modifiers": [],
+    "line": 11,
+    "used": true
+   },
+   {
+    "kind": "variable",
+    "name": "md5",
+    "type": "var",
+    "modifiers": [],
+    "line": 17,
+    "used": true
+   },
+   {
+    "kind": "variable",
+    "name": "formatter",
+    "type": "BinaryFormatter",
+    "modifiers": [],
+    "line": 23,
+    "used": true
+   },
+   {
+    "kind": "variable",
+    "name": "aleatorio",
+    "type": "Random",
+    "modifiers": [],
+    "line": 29,
+    "used": true
+   }
+  ],
+  "literals": [],
+  "invocations": [
+   {
+    "kind": "call",
+    "name": "Open",
+    "target": "connection.Open",
+    "line": 12,
+    "args": []
+   },
+   {
+    "kind": "call",
+    "name": "Create",
+    "target": "MD5.Create",
+    "line": 17,
+    "args": []
+   },
+   {
+    "kind": "call",
+    "name": "ComputeHash",
+    "target": "md5.ComputeHash",
+    "line": 18,
+    "args": [
+     {
+      "text": "datos",
+      "name": null,
+      "literal": false,
+      "value": null,
+      "concatenated": false,
+      "dynamic": true,
+      "literal_parts": []
+     }
+    ]
+   },
+   {
+    "kind": "call",
+    "name": "Deserialize",
+    "target": "formatter.Deserialize",
+    "line": 24,
+    "args": [
+     {
+      "text": "flujo",
+      "name": null,
+      "literal": false,
+      "value": null,
+      "concatenated": false,
+      "dynamic": true,
+      "literal_parts": []
+     }
+    ]
+   },
+   {
+    "kind": "call",
+    "name": "Next",
+    "target": "aleatorio.Next",
+    "line": 30,
+    "args": []
+   },
+   {
+    "kind": "new",
+    "name": "SqlConnection",
+    "target": "SqlConnection",
+    "line": 11,
+    "args": [
+     {
+      "text": "cadena",
+      "name": null,
+      "literal": false,
+      "value": null,
+      "concatenated": false,
+      "dynamic": true,
+      "literal_parts": []
+     }
+    ]
+   },
+   {
+    "kind": "new",
+    "name": "BinaryFormatter",
+    "target": "BinaryFormatter",
+    "line": 23,
+    "args": []
+   },
+   {
+    "kind": "new",
+    "name": "Random",
+    "target": "Random",
+    "line": 29,
+    "args": []
+   }
+  ],
+  "assignments": [],
+  "concatenations": [],
+  "classes": [
+   {
+    "name": "DbContext",
+    "line": 7,
+    "modifiers": [
+     "public"
+    ],
+    "attributes": [],
+    "bases": [],
+    "methods": [
+     {
+      "name": "Conectar",
+      "line": 9,
+      "modifiers": [
+       "public"
+      ],
+      "attributes": []
+     },
+     {
+      "name": "Hash",
+      "line": 15,
+      "modifiers": [
+       "public"
+      ],
+      "attributes": []
+     },
+     {
+      "name": "Cargar",
+      "line": 21,
+      "modifiers": [
+       "public"
+      ],
+      "attributes": []
+     },
+     {
+      "name": "Token",
+      "line": 27,
+      "modifiers": [
+       "public"
+      ],
+      "attributes": []
+     }
+    ]
+   }
+  ],
+  "catches": [],
+  "comparisons": [],
+  "disposables": [
+   {
+    "type": "SqlConnection",
+    "variable": "connection",
+    "line": 11,
+    "wrapped_in_using": false,
+    "disposed_explicitly": false
+   },
+   {
+    "type": "BinaryFormatter",
+    "variable": "formatter",
+    "line": 23,
+    "wrapped_in_using": false,
+    "disposed_explicitly": false
+   },
+   {
+    "type": "Random",
+    "variable": "aleatorio",
+    "line": 29,
+    "wrapped_in_using": false,
+    "disposed_explicitly": false
+   }
+  ]
+ },
+ {
+  "file": "Models/UserModel.cs",
+  "kind": "csharp",
+  "loc": 10,
+  "declarations": [
+   {
+    "kind": "property",
+    "name": "Id",
+    "type": "int",
+    "modifiers": [
+     "public"
+    ],
+    "line": 5
+   },
+   {
+    "kind": "property",
+    "name": "user_name",
+    "type": "string",
+    "modifiers": [
+     "public"
+    ],
+    "line": 6
+   },
+   {
+    "kind": "property",
+    "name": "Correo",
+    "type": "string",
+    "modifiers": [
+     "public"
+    ],
+    "line": 7
+   }
+  ],
+  "literals": [],
+  "invocations": [],
+  "assignments": [],
+  "concatenations": [],
+  "classes": [
+   {
+    "name": "UserModel",
+    "line": 3,
+    "modifiers": [
+     "public"
+    ],
+    "attributes": [],
+    "bases": [],
+    "methods": []
+   }
+  ],
+  "catches": [],
+  "comparisons": [],
+  "disposables": []
+ },
+ {
+  "file": "Services/ReportService.cs",
+  "kind": "csharp",
+  "loc": 33,
+  "declarations": [
+   {
+    "kind": "variable",
+    "name": "resumenTemporal",
+    "type": "var",
+    "modifiers": [],
+    "line": 10,
+    "used": false
+   },
+   {
+    "kind": "variable",
+    "name": "total",
+    "type": "var",
+    "modifiers": [],
+    "line": 11,
+    "used": true
+   }
+  ],
+  "literals": [
+   {
+    "kind": "string",
+    "value": ",",
+    "line": 10,
+    "assigned_to": null
+   }
+  ],
+  "invocations": [
+   {
+    "kind": "call",
+    "name": "Join",
+    "target": "string.Join",
+    "line": 10,
+    "args": [
+     {
+      "text": "\",\"",
+      "name": null,
+      "literal": true,
+      "value": ",",
+      "concatenated": false,
+      "dynamic": false,
+      "literal_parts": [
+       ","
+      ]
+     },
+     {
+      "text": "lineas",
+      "name": null,
+      "literal": false,
+      "value": null,
+      "concatenated": false,
+      "dynamic": true,
+      "literal_parts": []
+     }
+    ]
+   },
+   {
+    "kind": "call",
+    "name": "ToString",
+    "target": "total.ToString",
+    "line": 12,
+    "args": []
+   },
+   {
+    "kind": "call",
+    "name": "Delete",
+    "target": "File.Delete",
+    "line": 25,
+    "args": [
+     {
+      "text": "ruta",
+      "name": null,
+      "literal": false,
+      "value": null,
+      "concatenated": false,
+      "dynamic": true,
+      "literal_parts": []
+     }
+    ]
+   }
+  ],
+  "assignments": [
+   {
+    "target": "parametros.ValidateLifetime",
+    "member": "ValidateLifetime",
+    "value": "false",
+    "line": 17,
+    "concatenated": false,
+    "literal_parts": []
+   },
+   {
+    "target": "ajustes.TypeNameHandling",
+    "member": "TypeNameHandling",
+    "value": "TypeNameHandling.All",
+    "line": 18,
+    "concatenated": false,
+    "literal_parts": []
+   }
+  ],
+  "concatenations": [],
+  "classes": [
+   {
+    "name": "ReportService",
+    "line": 6,
+    "modifiers": [
+     "public"
+    ],
+    "attributes": [],
+    "bases": [],
+    "methods": [
+     {
+      "name": "Generar",
+      "line": 8,
+      "modifiers": [
+       "public"
+      ],
+      "attributes": []
+     },
+     {
+      "name": "Configurar",
+      "line": 15,
+      "modifiers": [
+       "public"
+      ],
+      "attributes": []
+     },
+     {
+      "name": "Procesar",
+      "line": 21,
+      "modifiers": [
+       "public"
+      ],
+      "attributes": []
+     }
+    ]
+   }
+  ],
+  "catches": [
+   {
+    "line": 27,
+    "type": "Exception",
+    "empty": true,
+    "rethrows": false,
+    "calls": []
+   }
+  ],
+  "comparisons": [],
+  "disposables": []
+ },
+ {
+  "file": "Startup.cs",
+  "kind": "csharp",
+  "loc": 18,
+  "declarations": [],
+  "literals": [
+   {
+    "kind": "string",
+    "value": "Todos",
+    "line": 14,
+    "assigned_to": null
+   }
+  ],
+  "invocations": [
+   {
+    "kind": "call",
+    "name": "AddJwtBearer",
+    "target": "services.AddAuthentication().AddJwtBearer",
+    "line": 9,
+    "args": [
+     {
+      "text": "options => { options.RequireHttpsMetadata = false; }",
+      "name": null,
+      "literal": false,
+      "value": null,
+      "concatenated": false,
+      "dynamic": true,
+      "literal_parts": []
+     }
+    ]
+   },
+   {
+    "kind": "call",
+    "name": "AddAuthentication",
+    "target": "services.AddAuthentication",
+    "line": 9,
+    "args": []
+   },
+   {
+    "kind": "call",
+    "name": "AddCors",
+    "target": "services.AddCors",
+    "line": 14,
+    "args": [
+     {
+      "text": "o => o.AddPolicy(\"Todos\", policy => policy.AllowAnyOrigin().AllowAnyHeader())",
+      "name": null,
+      "literal": false,
+      "value": null,
+      "concatenated": false,
+      "dynamic": true,
+      "literal_parts": []
+     }
+    ]
+   },
+   {
+    "kind": "call",
+    "name": "AddPolicy",
+    "target": "o.AddPolicy",
+    "line": 14,
+    "args": [
+     {
+      "text": "\"Todos\"",
+      "name": null,
+      "literal": true,
+      "value": "Todos",
+      "concatenated": false,
+      "dynamic": false,
+      "literal_parts": [
+       "Todos"
+      ]
+     },
+     {
+      "text": "policy => policy.AllowAnyOrigin().AllowAnyHeader()",
+      "name": null,
+      "literal": false,
+      "value": null,
+      "concatenated": false,
+      "dynamic": true,
+      "literal_parts": []
+     }
+    ]
+   },
+   {
+    "kind": "call",
+    "name": "AllowAnyHeader",
+    "target": "policy.AllowAnyOrigin().AllowAnyHeader",
+    "line": 14,
+    "args": []
+   },
+   {
+    "kind": "call",
+    "name": "AllowAnyOrigin",
+    "target": "policy.AllowAnyOrigin",
+    "line": 14,
+    "args": []
+   }
+  ],
+  "assignments": [
+   {
+    "target": "options.RequireHttpsMetadata",
+    "member": "RequireHttpsMetadata",
+    "value": "false",
+    "line": 11,
+    "concatenated": false,
+    "literal_parts": []
+   }
+  ],
+  "concatenations": [],
+  "classes": [
+   {
+    "name": "Startup",
+    "line": 5,
+    "modifiers": [
+     "public"
+    ],
+    "attributes": [],
+    "bases": [],
+    "methods": [
+     {
+      "name": "ConfigureServices",
+      "line": 7,
+      "modifiers": [
+       "public"
+      ],
+      "attributes": []
+     }
+    ]
+   }
+  ],
+  "catches": [],
+  "comparisons": [],
+  "disposables": []
+ },
+ {
+  "file": "AtuneraPacifico.csproj",
+  "kind": "csproj",
+  "loc": 12,
+  "packages": [
+   {
+    "name": "Newtonsoft.Json",
+    "version": "12.0.3",
+    "line": 6
+   },
+   {
+    "name": "System.Data.SqlClient",
+    "version": "4.8.6",
+    "line": 7
+   },
+   {
+    "name": "Serilog.AspNetCore",
+    "version": "*",
+    "line": 8
+   },
+   {
+    "name": "Microsoft.EntityFrameworkCore",
+    "version": "8.0.8",
+    "line": 9
+   }
+  ]
+ },
+ {
+  "file": "appsettings.json",
+  "kind": "config",
+  "loc": 11,
+  "settings": [
+   {
+    "key": "ConnectionStrings:Principal",
+    "value": "Server=db.atunera.local;Database=Pesca;User Id=sa;Password=Atun2026!;",
+    "line": 3
+   },
+   {
+    "key": "Jwt:Secret",
+    "value": "clave-super-secreta-de-prueba",
+    "line": 6
+   },
+   {
+    "key": "DetailedErrors",
+    "value": "true",
+    "line": 8
+   },
+   {
+    "key": "AllowedHosts",
+    "value": "*",
+    "line": 9
+   }
+  ]
+ }
 ]

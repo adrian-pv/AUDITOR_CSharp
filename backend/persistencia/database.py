@@ -27,7 +27,7 @@ def cargar_env(ruta: Path = CARPETA_BACKEND / ".env") -> None:
     """Lee backend/.env (CLAVE=valor por línea) sin pisar variables ya definidas."""
     if not ruta.exists():
         return
-    for linea in ruta.read_text(encoding="utf-8").splitlines():
+    for linea in ruta.read_text(encoding="utf-8-sig").splitlines():
         linea = linea.strip()
         if not linea or linea.startswith("#") or "=" not in linea:
             continue

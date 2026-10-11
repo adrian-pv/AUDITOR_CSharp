@@ -8,9 +8,11 @@ from fastapi.testclient import TestClient
 import api.reportes
 import server
 from engine.ast_bridge import load_ast_fixture
+from modules import CATALOGO_INICIAL
 from persistencia.inicializacion import ADMIN_CORREO
 
 FIXTURE = Path(__file__).parent / "fixtures" / "atunerapacifico_ast.json"
+TODAS = {r["codigo"] for r in CATALOGO_INICIAL}
 
 
 @pytest.fixture(scope="module")
@@ -81,7 +83,7 @@ def test_desarrollador_analiza_y_el_reporte_queda_en_bd(cliente):
     assert r.status_code == 200, r.text
     rep = r.json()
     assert rep["proyecto"] == "AtuneraPacifico"
-    assert {h["id"] for h in rep["hallazgos"]} == {"SEG-001", "SEG-002", "MEM-004", "GOV-001", "PERF-001"}
+    assert {h["id"] for h in rep["hallazgos"]} == TODAS
     # El reporte lleva ids, no datos personales
     yo = cliente.get("/api/auth/yo", headers=dev).json()
     assert rep["usuario_id"] == yo["id"]
@@ -144,7 +146,6 @@ def test_cambiar_contrasena(cliente):
     _login(cliente, "pw@test.com", "otra-clave-1")
 
 
-TODAS = {"SEG-001", "SEG-002", "MEM-004", "GOV-001", "PERF-001"}
 
 
 def test_por_defecto_se_aplican_todas_las_reglas(cliente):
@@ -161,6 +162,7 @@ def test_desarrollador_puede_quitar_reglas_antes_de_analizar(cliente):
     rep = _analizar(cliente, dev, ["SEG-001", "SEG-002"]).json()
     assert {c["codigo"] for c in rep["criterios"]} == {"SEG-001", "SEG-002"}
     assert {h["id"] for h in rep["hallazgos"]} == {"SEG-001", "SEG-002"}
+    assert all(h["owasp_2021"] and h["owasp_2025"] for h in rep["hallazgos"])
     # Solo el módulo con reglas aplicadas recibe porcentaje de cumplimiento
     assert list(rep["cumplimiento_por_modulo"]) == ["Módulo 1: Seguridad"]
     assert _analizar(cliente, dev, []).status_code == 200  # vacío = todas
@@ -181,12 +183,76 @@ def test_auditor_elige_criterios_y_se_recalculan_las_metricas(cliente):
     assert r.status_code == 200, r.text
     nuevo = r.json()
     assert {h["id"] for h in nuevo["hallazgos"]} == {"SEG-001", "MEM-004"}
-    assert nuevo["stats"]["vulnerabilidades"] == 2
+    esperado = sum(1 for h in rep["hallazgos"] if h["id"] in ("SEG-001", "MEM-004"))
+    assert nuevo["stats"]["vulnerabilidades"] == esperado
     assert set(nuevo["cumplimiento_por_modulo"]) == {"Módulo 1: Seguridad", "Módulo 3: Memoria"}
     assert {c["codigo"] for c in nuevo["criterios"] if c["evaluada"]} == {"SEG-001", "MEM-004"}
 
     # La selección queda guardada: el desarrollador también la ve
     visto = cliente.get(f"/api/reportes/{rep['reporte_id']}", headers=dev).json()
-    assert visto["stats"]["vulnerabilidades"] == 2
+    assert visto["stats"]["vulnerabilidades"] == esperado
     fila = [h for h in cliente.get("/api/reportes", headers=auditor).json() if h["reporte_id"] == rep["reporte_id"]][0]
-    assert (fila["criterios_evaluados"], fila["criterios_total"]) == (2, 5)
+    assert (fila["criterios_evaluados"], fila["criterios_total"]) == (2, len(TODAS))
+
+
+# ----------------------------------------------------------------------------- reglas configurables
+
+
+def _regla_base(**cambios):
+    datos = {
+        "nombre": "Uso de Thread.Abort", "modulo": "Módulo 2: Rendimiento", "categoria": "Rendimiento (.NET)",
+        "severidad": "ADVERTENCIA", "tipo_deteccion": "llamada_a_metodo", "patrones": ["Thread.Abort"],
+        "mensaje": "{detalle} Interrumpe hilos de forma insegura.", "recomendacion": "Usar CancellationToken.",
+    }
+    datos.update(cambios)
+    return datos
+
+
+def test_plantillas_y_owasp_disponibles(cliente):
+    admin = _login(cliente, ADMIN_CORREO, "admin123")
+    p = cliente.get("/api/reglas/plantillas", headers=admin).json()
+    assert "concatenacion_con_patron" in {d["tipo"] for d in p["detectores"]}
+    assert len(p["owasp_2021"]) == len(p["owasp_2025"]) == 10
+
+
+def test_admin_crea_regla_nueva_con_codigo_automatico(cliente):
+    admin = _login(cliente, ADMIN_CORREO, "admin123")
+    dev = _crear(cliente, admin, "regla-dev@test.com", "Desarrollador")
+    assert cliente.post("/api/reglas", headers=dev, json=_regla_base()).status_code == 403
+    r = cliente.post("/api/reglas", headers=admin, json=_regla_base())
+    assert r.status_code == 201, r.text
+    assert r.json()["codigo"] == "PERF-002" and r.json()["predefinida"] is False
+
+
+def test_admin_agrega_caracter_especial_y_el_analisis_lo_detecta(cliente, monkeypatch):
+    admin = _login(cliente, ADMIN_CORREO, "admin123")
+    ast = [{"file": "X/Rutas.cs", "kind": "csharp", "loc": 5, "concatenations": [
+        {"line": 3, "text": "\"/datos¬\" + nombre", "literal_parts": ["/datos¬"], "has_dynamic": True}]}]
+    monkeypatch.setattr(api.reportes, "parse_solution", lambda _r: ast)
+
+    antes = _analizar(cliente, admin, ["SEG-004"]).json()
+    assert antes["hallazgos"] == []
+
+    regla = next(x for x in cliente.get("/api/reglas", headers=admin).json() if x["codigo"] == "SEG-004")
+    regla["patrones"].append("¬")
+    r = cliente.put("/api/reglas/SEG-004", headers=admin, json=regla)
+    assert r.status_code == 200, r.text
+    try:
+        despues = _analizar(cliente, admin, ["SEG-004"]).json()
+        assert [h["id"] for h in despues["hallazgos"]] == ["SEG-004"]
+        assert "«¬»" in despues["hallazgos"][0]["descripcion"]
+    finally:
+        regla["patrones"].remove("¬")
+        cliente.put("/api/reglas/SEG-004", headers=admin, json=regla)
+
+
+def test_validaciones_de_regla(cliente):
+    admin = _login(cliente, ADMIN_CORREO, "admin123")
+    assert cliente.post("/api/reglas", headers=admin, json=_regla_base(patrones=[])).status_code == 422
+    assert cliente.post("/api/reglas", headers=admin, json=_regla_base(tipo_deteccion="inventado")).status_code == 422
+    assert cliente.post("/api/reglas", headers=admin, json=_regla_base(owasp_2021="A11:2021")).status_code == 422
+    assert cliente.post("/api/reglas", headers=admin, json=_regla_base(
+        tipo_deteccion="nomenclatura", patrones=["[A-Z"])).status_code == 422
+    seg001 = next(x for x in cliente.get("/api/reglas", headers=admin).json() if x["codigo"] == "SEG-001")
+    seg001["tipo_deteccion"] = "llamada_a_metodo"
+    assert cliente.put("/api/reglas/SEG-001", headers=admin, json=seg001).status_code == 422

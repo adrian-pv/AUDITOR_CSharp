@@ -15,7 +15,7 @@ un motor de reglas que sí se ejecuta y sí se prueba (ver `backend/tests`).
 auditor-csharp-tool/
 ├── backend/            Motor de reglas en Python
 │   ├── engine/          Orquestador, puente a Roslyn, clases base, reporte
-│   ├── modules/          Una carpeta por módulo (seguridad, rendimiento, memoria, gobierno)
+│   ├── modules/          Catálogo de reglas de fábrica por módulo (seguridad, rendimiento, memoria, gobierno)
 │   ├── api/              Endpoints HTTP: autenticación, usuarios, reglas, análisis/reportes
 │   ├── autenticacion/    Hash de contraseñas (scrypt) y sesiones con JWT
 │   ├── persistencia/     Base de datos: Usuario, Proyecto, Reporte, Hallazgo, Regla
@@ -137,16 +137,63 @@ Cada análisis real que corres desde la interfaz también se guarda en
 `backend/reports/`, con nombre `reporte_<nombre-carpeta>_<AAAAMMDD_HHMMSS>.json`
 — así queda un historial de cada corrida sin que se sobrescriban entre sí.
 
+## Reglas configurables y cobertura OWASP
+
+Las reglas **no están programadas una por una**: cada regla de la tabla
+`regla` elige uno de los detectores genéricos del motor
+(`backend/engine/detectores.py`) y le indica qué buscar con una lista de
+**patrones** (palabras clave, métodos, tipos, caracteres especiales, pares
+`Miembro=valor`, paquetes NuGet…). El **Administrador** puede, desde
+*Reglas y Políticas*:
+
+- editar los patrones, la severidad, las categorías OWASP/CWE y los textos de cualquier regla;
+- crear reglas nuevas eligiendo una plantilla (tipo de detección), sin programar;
+- activarlas o desactivarlas.
+
+Ejemplo: si aparece un carácter especial nuevo capaz de romper una consulta,
+basta con agregarlo a los patrones de **SEG-004** y el siguiente análisis ya
+lo detecta.
+
+Además del código C#, el análisis revisa los `.csproj` (dependencias NuGet) y
+los `appsettings*.json` (configuración). Catálogo de fábrica
+(`backend/modules/*/reglas.py`), que cubre las diez categorías del OWASP Top
+10:2021 y las diez de la edición 2025:
+
+| Código | Regla | OWASP 2021 | OWASP 2025 | CWE |
+|---|---|---|---|---|
+| SEG-001 | Credenciales embebidas en el código | A07:2021 | A07:2025 | CWE-798 |
+| SEG-002 | Inyección SQL: consulta sin parametrizar | A03:2021 | A05:2025 | CWE-89 |
+| SEG-003 | Inyección de comandos del sistema operativo | A03:2021 | A05:2025 | CWE-78 |
+| SEG-004 | Caracteres especiales peligrosos junto a datos externos | A03:2021 | A05:2025 | CWE-74 |
+| SEG-005 | Recorrido de directorios (Path Traversal) | A01:2021 | A01:2025 | CWE-22 |
+| SEG-006 | Solicitud a URL controlada por el usuario (SSRF) | A10:2021 | A01:2025 | CWE-918 |
+| SEG-007 | Algoritmo criptográfico débil u obsoleto | A02:2021 | A04:2025 | CWE-327 |
+| SEG-008 | Generador de números aleatorios no criptográfico | A02:2021 | A04:2025 | CWE-330 |
+| SEG-009 | Deserialización insegura | A08:2021 | A08:2025 | CWE-502 |
+| SEG-010 | Validación de tokens JWT desactivada | A07:2021 | A07:2025 | CWE-287 |
+| SEG-011 | Configuración de seguridad desactivada en el código | A05:2021 | A02:2025 | CWE-16 |
+| SEG-012 | Deserialización JSON con tipos arbitrarios | A08:2021 | A08:2025 | CWE-502 |
+| SEG-013 | Política CORS abierta a cualquier origen | A05:2021 | A02:2025 | CWE-942 |
+| SEG-014 | Controlador sin control de acceso | A01:2021 | A01:2025 | CWE-862 |
+| SEG-015 | Acción que modifica datos sin protección CSRF | A01:2021 | A01:2025 | CWE-352 |
+| SEG-016 | Excepción ignorada o capturada de forma genérica | A09:2021 | A10:2025 | CWE-390 |
+| SEG-017 | Datos sensibles escritos en el registro (log) | A09:2021 | A09:2025 | CWE-532 |
+| SEG-018 | Dependencia vulnerable, obsoleta o sin versión fija | A06:2021 | A03:2025 | CWE-1104 |
+| SEG-019 | Configuración insegura en appsettings.json | A05:2021 | A02:2025 | CWE-16 |
+| SEG-020 | Secreto en archivo de configuración | A07:2021 | A07:2025 | CWE-798 |
+| SEG-021 | Contraseña comparada en texto plano | A04:2021 | A06:2025 | CWE-256 |
+| PERF-001 | Variables locales declaradas sin utilización | — | — | CWE-563 |
+| MEM-004 | Clases IDisposable sin bloque 'using' o cierre formal | — | A10:2025 | CWE-404 |
+| GOV-001 | Falta de nomenclatura estándar PascalCase | — | — | — |
+
+`backend/tests/fixtures/AtuneraPacifico/` es un proyecto C# de muestra con un
+caso de cada regla (y código seguro que no debe marcarse); las pruebas
+verifican que cada regla lo detecta.
+
 ## Estado actual
 
-- El motor de reglas y sus 5 reglas de ejemplo (una por módulo, más una
-  segunda de Seguridad) están implementados y probados, y ya se validaron
-  contra código C# real de punta a punta (ver `docs/arquitectura.md` para
-  las limitaciones conocidas del análisis puramente sintáctico).
-- El frontend ya está conectado al motor real a través de `server.py` y el
-  selector de carpeta. Lo que todavía no está implementado —como PERF-001,
-  que depende de `DataFlowAnalysis`— simplemente no aparece en los
-  hallazgos de un análisis real; el catálogo completo de reglas y la
-  Matriz de Reglas y Políticas de la interfaz siguen siendo estáticos
-  hasta que se amplíen (ver "Próximos pasos" en `docs/arquitectura.md`).
-
+- 24 reglas de fábrica en los cuatro módulos, con cobertura completa del
+  OWASP Top 10:2021 y 2025, validadas de punta a punta con Roslyn sobre el
+  proyecto de muestra (ver `docs/arquitectura.md` para las limitaciones del
+  análisis puramente sintáctico).
+- Reglas editables y creables por el Administrador desde la interfaz.

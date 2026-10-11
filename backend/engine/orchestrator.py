@@ -2,30 +2,18 @@
 Orquestador del motor de gobierno y auditoría.
 
 Responsabilidades:
-  1. Registrar las reglas activas de los cuatro módulos.
-  2. Ejecutar cada regla contra el AST simplificado de cada archivo.
-  3. Agregar los hallazgos en las métricas que consume la interfaz
-     (LOC total, densidad de errores, score de gobierno, cumplimiento
-     por módulo).
+  1. Recibir las reglas a aplicar (definiciones de la base de datos o, sin
+     base de datos, el catálogo inicial de modules/).
+  2. Ejecutar el detector de cada regla contra el AST de cada archivo.
+  3. Agregar los hallazgos en las métricas que consume la interfaz (LOC,
+     densidad de errores, score de gobierno y cumplimiento por módulo).
 """
 
 from __future__ import annotations
 
-from engine.rule_base import Finding
-from modules.gobierno.gov_001_naming_convention import NamingConventionRule
-from modules.memoria.mem_004_idisposable_leak import IDisposableLeakRule
-from modules.rendimiento.perf_001_unused_variables import UnusedVariablesRule
-from modules.seguridad.seg_001_hardcoded_credentials import HardcodedCredentialsRule
-from modules.seguridad.seg_002_sql_injection import SqlInjectionRule
-
-# Registro central de reglas. Añadir una regla nueva es agregar una línea aquí.
-REGLAS_REGISTRADAS = [
-    HardcodedCredentialsRule(),
-    SqlInjectionRule(),
-    UnusedVariablesRule(),
-    IDisposableLeakRule(),
-    NamingConventionRule(),
-]
+from engine.detectores import DETECTORES, aplica_a
+from engine.regla_def import ReglaDef
+from modules import CATALOGO_INICIAL
 
 MODULOS = [
     "Módulo 1: Seguridad",
@@ -35,22 +23,52 @@ MODULOS = [
 ]
 
 
-def run_engine(ast_files: list[dict], reglas: list | None = None) -> dict:
-    """
-    Ejecuta todas las reglas activas contra la lista de ASTs de archivo y
-    retorna el reporte agregado (mismo shape que consume el frontend).
-    """
-    reglas = reglas if reglas is not None else [r for r in REGLAS_REGISTRADAS if r.activa]
+def reglas_del_catalogo() -> list[ReglaDef]:
+    return [ReglaDef.desde_dict(r) for r in CATALOGO_INICIAL]
 
-    findings: list[Finding] = []
+
+def run_engine(ast_files: list[dict], reglas: list[ReglaDef] | None = None) -> dict:
+    """Ejecuta las reglas contra los ASTs y retorna el reporte agregado."""
+    reglas = reglas if reglas is not None else [r for r in reglas_del_catalogo() if r.activa]
+
+    hallazgos: list[dict] = []
     for ast_file in ast_files:
         for regla in reglas:
-            findings.extend(regla.analyze(ast_file))
+            detector = DETECTORES.get(regla.tipo_deteccion)
+            if detector is None or not aplica_a(regla.tipo_deteccion, ast_file):
+                continue
+            vistos = set()
+            for linea, detalle in detector(regla, ast_file):
+                if (linea, detalle) in vistos:
+                    continue
+                vistos.add((linea, detalle))
+                hallazgos.append(_hallazgo(regla, ast_file["file"], linea, detalle))
 
-    loc_total = sum(f.get("loc", 0) for f in ast_files)
-    hallazgos = [_finding_to_dict(f) for f in findings]
+    # Las métricas de LOC cuentan solo código C# (no .csproj ni appsettings).
+    loc_total = sum(f.get("loc", 0) for f in ast_files if f.get("kind", "csharp") == "csharp")
     modulos = {r.modulo for r in reglas}
     return {**calcular_metricas(hallazgos, loc_total, modulos), "hallazgos": hallazgos}
+
+
+def _hallazgo(regla: ReglaDef, archivo: str, linea: int, detalle: str) -> dict:
+    try:
+        descripcion = (regla.mensaje or "{detalle}").format(detalle=detalle)
+    except (KeyError, IndexError, ValueError):  # plantilla mal escrita por el usuario
+        descripcion = f"{detalle} {regla.mensaje}"
+    return {
+        "id": regla.codigo,
+        "categoria": regla.categoria,
+        "modulo": regla.modulo,
+        "severidad": regla.severidad,
+        "archivo": archivo,
+        "linea": max(1, int(linea)),
+        "descripcion": descripcion.strip(),
+        "recomendacion": regla.recomendacion,
+        "estado": "Pendiente",
+        "owasp_2021": regla.owasp_2021,
+        "owasp_2025": regla.owasp_2025,
+        "cwe": regla.cwe,
+    }
 
 
 PESO_SEVERIDAD = {"CRÍTICO": 12, "ADVERTENCIA": 6, "BAJO": 2}
@@ -61,9 +79,8 @@ def calcular_metricas(hallazgos: list[dict], loc_total: int, modulos: set[str] |
     Métricas del panel a partir de una lista de hallazgos ({"modulo", "severidad", ...}).
 
     `modulos` son los módulos que tienen al menos una regla aplicada: solo esos
-    reciben porcentaje de cumplimiento (un módulo sin reglas evaluadas no puede
-    marcar 100% por omisión). Se usa tanto al terminar un análisis como cuando el
-    auditor elige qué criterios evaluar en un reporte ya generado.
+    reciben porcentaje de cumplimiento. Se usa al terminar un análisis y cuando
+    el auditor elige qué criterios evaluar en un reporte ya generado.
     """
     modulos = set(MODULOS) if modulos is None else modulos
     densidad = round((len(hallazgos) / loc_total) * 100, 2) if loc_total else 0.0
@@ -88,18 +105,4 @@ def calcular_metricas(hallazgos: list[dict], loc_total: int, modulos: set[str] |
             "score_gobierno": score,
         },
         "cumplimiento_por_modulo": cumplimiento,
-    }
-
-
-def _finding_to_dict(f: Finding) -> dict:
-    return {
-        "id": f.regla_id,
-        "categoria": f.categoria,
-        "modulo": f.modulo,
-        "severidad": f.severidad.value,
-        "archivo": f.archivo,
-        "linea": f.linea,
-        "descripcion": f.descripcion,
-        "recomendacion": f.recomendacion,
-        "estado": f.estado.value,
     }

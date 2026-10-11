@@ -1,0 +1,208 @@
+"""
+Catálogo inicial de reglas del Módulo 1: Seguridad.
+
+Cubre las diez categorías del OWASP Top 10:2021 (y su equivalente 2025)
+aplicables al análisis estático de código C#. Estas son solo las reglas de
+fábrica: al arrancar se copian a la base de datos, y a partir de ahí el
+Administrador puede editar sus patrones o crear reglas nuevas desde la
+interfaz, sin modificar este archivo.
+"""
+
+M = "Módulo 1: Seguridad"
+C = "Seguridad (OWASP)"
+
+REGLAS = [
+    {
+        "codigo": "SEG-001", "nombre": "Credenciales embebidas en el código",
+        "tipo_deteccion": "literal_asignado", "severidad": "CRÍTICO",
+        "patrones": ["password", "pwd", "contrasena", "clave", "secret", "apikey", "api_key", "token", "connectionstring"],
+        "owasp_2021": "A07:2021", "owasp_2025": "A07:2025", "cwe": "CWE-798",
+        "mensaje": "{detalle} Almacenar secretos en el código vulnera CWE-798.",
+        "recomendacion": "Mover la credencial a variables de entorno, User Secrets o un almacén de secretos (Azure Key Vault).",
+    },
+    {
+        "codigo": "SEG-002", "nombre": "Inyección SQL: consulta sin parametrizar",
+        "tipo_deteccion": "llamada_con_argumento_dinamico", "severidad": "CRÍTICO",
+        "patrones": ["SqlCommand", "SqlDataAdapter", "OleDbCommand", "OdbcCommand", "MySqlCommand", "NpgsqlCommand",
+                     "OracleCommand", "CommandText", "ExecuteSqlRaw", "ExecuteSqlRawAsync", "FromSqlRaw", "ExecuteSqlCommand"],
+        "parametros": {"modo": "concatenado"},
+        "owasp_2021": "A03:2021", "owasp_2025": "A05:2025", "cwe": "CWE-89",
+        "mensaje": "{detalle} La consulta SQL se arma concatenando datos (CWE-89).",
+        "recomendacion": "Usar SqlParameter / consultas parametrizadas o LINQ con Entity Framework (FromSqlInterpolated).",
+    },
+    {
+        "codigo": "SEG-003", "nombre": "Inyección de comandos del sistema operativo",
+        "tipo_deteccion": "llamada_con_argumento_dinamico", "severidad": "CRÍTICO",
+        "patrones": ["Process.Start", "ProcessStartInfo"],
+        "parametros": {"modo": "concatenado"},
+        "owasp_2021": "A03:2021", "owasp_2025": "A05:2025", "cwe": "CWE-78",
+        "mensaje": "{detalle} Un atacante podría ejecutar comandos arbitrarios (CWE-78).",
+        "recomendacion": "Evitar invocar el intérprete de comandos; validar la entrada contra una lista blanca y pasar argumentos por ArgumentList.",
+    },
+    {
+        "codigo": "SEG-004", "nombre": "Caracteres especiales peligrosos junto a datos externos",
+        "tipo_deteccion": "concatenacion_con_patron", "severidad": "ADVERTENCIA",
+        "patrones": ["'", "\"", ";", "--", "/*", "*/", "../", "..\\", "<script", "<", ">", "|", "&&", "`", "$(", "%00"],
+        "owasp_2021": "A03:2021", "owasp_2025": "A05:2025", "cwe": "CWE-74",
+        "mensaje": "{detalle}",
+        "recomendacion": "Validar y escapar la entrada según su destino (SQL, HTML, ruta, comando) o usar APIs que separen datos de instrucciones.",
+    },
+    {
+        "codigo": "SEG-005", "nombre": "Recorrido de directorios (Path Traversal)",
+        "tipo_deteccion": "llamada_con_argumento_dinamico", "severidad": "CRÍTICO",
+        "patrones": ["File.ReadAllText", "File.ReadAllBytes", "File.ReadAllLines", "File.WriteAllText", "File.WriteAllBytes",
+                     "File.Open", "File.OpenRead", "File.Delete", "File.Copy", "File.Move", "FileStream", "StreamReader",
+                     "StreamWriter", "PhysicalFile", "Directory.Delete"],
+        "parametros": {"modo": "concatenado"},
+        "owasp_2021": "A01:2021", "owasp_2025": "A01:2025", "cwe": "CWE-22",
+        "mensaje": "{detalle} La ruta se arma con datos externos (CWE-22).",
+        "recomendacion": "Usar Path.GetFileName y verificar que la ruta final (Path.GetFullPath) quede dentro del directorio permitido.",
+    },
+    {
+        "codigo": "SEG-006", "nombre": "Solicitud a URL controlada por el usuario (SSRF)",
+        "tipo_deteccion": "llamada_con_argumento_dinamico", "severidad": "ADVERTENCIA",
+        "patrones": ["GetAsync", "GetStringAsync", "GetByteArrayAsync", "GetStreamAsync", "PostAsync", "PutAsync",
+                     "WebRequest.Create", "HttpWebRequest.Create", "DownloadString", "DownloadData", "OpenRead"],
+        "parametros": {"modo": "dinamico", "solo_primer_argumento": True},
+        "owasp_2021": "A10:2021", "owasp_2025": "A01:2025", "cwe": "CWE-918",
+        "mensaje": "{detalle} El servidor hace una petición a una dirección que no es fija (CWE-918).",
+        "recomendacion": "Validar la URL contra una lista blanca de dominios y bloquear direcciones internas (localhost, 169.254.x.x, redes privadas).",
+    },
+    {
+        "codigo": "SEG-007", "nombre": "Algoritmo criptográfico débil u obsoleto",
+        "tipo_deteccion": "llamada_a_metodo", "severidad": "CRÍTICO",
+        "patrones": ["MD5.Create", "MD5CryptoServiceProvider", "SHA1.Create", "SHA1Managed", "SHA1CryptoServiceProvider",
+                     "DES.Create", "DESCryptoServiceProvider", "TripleDES.Create", "TripleDESCryptoServiceProvider",
+                     "RC2.Create", "RC2CryptoServiceProvider"],
+        "owasp_2021": "A02:2021", "owasp_2025": "A04:2025", "cwe": "CWE-327",
+        "mensaje": "{detalle} El algoritmo se considera roto o débil (CWE-327).",
+        "recomendacion": "Usar SHA-256 o superior para integridad, AES-GCM para cifrado y PBKDF2/Argon2 para contraseñas.",
+    },
+    {
+        "codigo": "SEG-008", "nombre": "Generador de números aleatorios no criptográfico",
+        "tipo_deteccion": "llamada_a_metodo", "severidad": "BAJO",
+        "patrones": ["Random"],
+        "owasp_2021": "A02:2021", "owasp_2025": "A04:2025", "cwe": "CWE-330",
+        "mensaje": "{detalle} System.Random es predecible si se usa para tokens o claves (CWE-330).",
+        "recomendacion": "Para valores de seguridad usar RandomNumberGenerator.GetBytes / GetInt32.",
+    },
+    {
+        "codigo": "SEG-009", "nombre": "Deserialización insegura",
+        "tipo_deteccion": "llamada_a_metodo", "severidad": "CRÍTICO",
+        "patrones": ["BinaryFormatter", "SoapFormatter", "NetDataContractSerializer", "LosFormatter",
+                     "ObjectStateFormatter", "JavaScriptSerializer"],
+        "owasp_2021": "A08:2021", "owasp_2025": "A08:2025", "cwe": "CWE-502",
+        "mensaje": "{detalle} Deserializar datos no confiables puede ejecutar código (CWE-502).",
+        "recomendacion": "Reemplazar por System.Text.Json con tipos explícitos; nunca deserializar tipos arbitrarios.",
+    },
+    {
+        "codigo": "SEG-010", "nombre": "Validación de tokens JWT desactivada",
+        "tipo_deteccion": "asignacion_insegura", "severidad": "CRÍTICO",
+        "patrones": ["ValidateIssuer=false", "ValidateAudience=false", "ValidateLifetime=false",
+                     "ValidateIssuerSigningKey=false", "RequireSignedTokens=false", "RequireExpirationTime=false"],
+        "owasp_2021": "A07:2021", "owasp_2025": "A07:2025", "cwe": "CWE-287",
+        "mensaje": "Se desactiva una validación del token: {detalle} (CWE-287).",
+        "recomendacion": "Mantener activas todas las validaciones de TokenValidationParameters.",
+    },
+    {
+        "codigo": "SEG-011", "nombre": "Configuración de seguridad desactivada en el código",
+        "tipo_deteccion": "asignacion_insegura", "severidad": "ADVERTENCIA",
+        "patrones": ["RequireHttpsMetadata=false", "HttpOnly=false", "SecurePolicy=None",
+                     "ServerCertificateValidationCallback=true", "ServerCertificateCustomValidationCallback=true",
+                     "Mode=ECB"],
+        "owasp_2021": "A05:2021", "owasp_2025": "A02:2025", "cwe": "CWE-16",
+        "mensaje": "Configuración insegura: {detalle}",
+        "recomendacion": "Exigir HTTPS, cookies HttpOnly/Secure, validar certificados y no usar el modo de cifrado ECB.",
+    },
+    {
+        "codigo": "SEG-012", "nombre": "Deserialización JSON con tipos arbitrarios",
+        "tipo_deteccion": "asignacion_insegura", "severidad": "CRÍTICO",
+        "patrones": ["TypeNameHandling=All", "TypeNameHandling=Auto", "TypeNameHandling=Objects", "TypeNameHandling=Arrays"],
+        "owasp_2021": "A08:2021", "owasp_2025": "A08:2025", "cwe": "CWE-502",
+        "mensaje": "{detalle} Newtonsoft.Json podrá instanciar cualquier tipo indicado en el JSON (CWE-502).",
+        "recomendacion": "Usar TypeNameHandling.None o un SerializationBinder con lista blanca de tipos.",
+    },
+    {
+        "codigo": "SEG-013", "nombre": "Política CORS abierta a cualquier origen",
+        "tipo_deteccion": "llamada_a_metodo", "severidad": "ADVERTENCIA",
+        "patrones": ["AllowAnyOrigin", "SetIsOriginAllowed"],
+        "owasp_2021": "A05:2021", "owasp_2025": "A02:2025", "cwe": "CWE-942",
+        "mensaje": "{detalle} Cualquier sitio podría consumir la API desde el navegador (CWE-942).",
+        "recomendacion": "Declarar explícitamente los orígenes permitidos con WithOrigins(...).",
+    },
+    {
+        "codigo": "SEG-014", "nombre": "Controlador sin control de acceso",
+        "tipo_deteccion": "controlador_sin_atributo", "severidad": "ADVERTENCIA",
+        "patrones": ["Authorize", "AllowAnonymous"],
+        "parametros": {"alcance": "clase"},
+        "owasp_2021": "A01:2021", "owasp_2025": "A01:2025", "cwe": "CWE-862",
+        "mensaje": "{detalle} Sus acciones quedan expuestas sin autenticación (CWE-862).",
+        "recomendacion": "Agregar [Authorize] al controlador (o [AllowAnonymous] solo en las acciones públicas).",
+    },
+    {
+        "codigo": "SEG-015", "nombre": "Acción que modifica datos sin protección CSRF",
+        "tipo_deteccion": "controlador_sin_atributo", "severidad": "ADVERTENCIA",
+        "patrones": ["ValidateAntiForgeryToken", "AutoValidateAntiforgeryToken"],
+        "parametros": {"alcance": "accion", "excluir_si": ["ApiController"]},
+        "owasp_2021": "A01:2021", "owasp_2025": "A01:2025", "cwe": "CWE-352",
+        "mensaje": "{detalle} Un sitio externo podría enviar la petición en nombre del usuario (CWE-352).",
+        "recomendacion": "Agregar [ValidateAntiForgeryToken] a la acción o AutoValidateAntiforgeryToken como filtro global.",
+    },
+    {
+        "codigo": "SEG-016", "nombre": "Excepción ignorada o capturada de forma genérica",
+        "tipo_deteccion": "excepcion_mal_manejada", "severidad": "ADVERTENCIA",
+        "patrones": ["Exception", "SystemException"],
+        "owasp_2021": "A09:2021", "owasp_2025": "A10:2025", "cwe": "CWE-390",
+        "mensaje": "{detalle} Los errores pasan inadvertidos y el sistema puede quedar en un estado inconsistente (CWE-390).",
+        "recomendacion": "Capturar excepciones específicas, registrarlas con ILogger y relanzar o responder de forma controlada.",
+    },
+    {
+        "codigo": "SEG-017", "nombre": "Datos sensibles escritos en el registro (log)",
+        "tipo_deteccion": "llamada_con_dato_sensible", "severidad": "ADVERTENCIA",
+        "patrones": ["LogInformation", "LogDebug", "LogTrace", "LogWarning", "LogError", "LogCritical",
+                     "Console.WriteLine", "Debug.WriteLine", "Trace.WriteLine"],
+        "parametros": {"palabras": ["password", "contrasena", "pwd", "token", "secret", "apikey", "tarjeta", "cvv"]},
+        "owasp_2021": "A09:2021", "owasp_2025": "A09:2025", "cwe": "CWE-532",
+        "mensaje": "{detalle} Los registros quedan expuestos a quien tenga acceso a ellos (CWE-532).",
+        "recomendacion": "No registrar secretos ni datos personales; enmascararlos antes de escribir el log.",
+    },
+    {
+        "codigo": "SEG-018", "nombre": "Dependencia vulnerable, obsoleta o sin versión fija",
+        "tipo_deteccion": "paquete_vulnerable", "severidad": "ADVERTENCIA",
+        "patrones": ["Newtonsoft.Json<13.0.1", "System.Text.Encodings.Web<4.5.1", "log4net<2.0.10", "System.Data.SqlClient"],
+        "parametros": {"version_flotante": True},
+        "owasp_2021": "A06:2021", "owasp_2025": "A03:2025", "cwe": "CWE-1104",
+        "mensaje": "{detalle}",
+        "recomendacion": "Actualizar a una versión sin vulnerabilidades conocidas (revisar con 'dotnet list package --vulnerable') y fijar la versión.",
+    },
+    {
+        "codigo": "SEG-019", "nombre": "Configuración insegura en appsettings.json",
+        "tipo_deteccion": "configuracion_insegura", "severidad": "ADVERTENCIA",
+        "patrones": ["AllowedHosts=*", "DetailedErrors=true", "*:RequireHttpsMetadata=false", "Logging:LogLevel:Default=Trace"],
+        "owasp_2021": "A05:2021", "owasp_2025": "A02:2025", "cwe": "CWE-16",
+        "mensaje": "Ajuste inseguro: {detalle}",
+        "recomendacion": "Restringir AllowedHosts, desactivar errores detallados y el registro excesivo en producción.",
+    },
+    {
+        "codigo": "SEG-020", "nombre": "Secreto en archivo de configuración",
+        "tipo_deteccion": "secreto_en_configuracion", "severidad": "CRÍTICO",
+        "patrones": ["password", "pwd", "secret", "apikey", "api_key", "token", "clientsecret"],
+        "parametros": {"marcadores_en_valor": ["password=", "pwd="]},
+        "owasp_2021": "A07:2021", "owasp_2025": "A07:2025", "cwe": "CWE-798",
+        "mensaje": "{detalle} Cualquiera con acceso al repositorio puede leerlo (CWE-798).",
+        "recomendacion": "Usar variables de entorno, User Secrets o Azure Key Vault y dejar el valor vacío en el repositorio.",
+    },
+    {
+        "codigo": "SEG-021", "nombre": "Contraseña comparada en texto plano",
+        "tipo_deteccion": "comparacion_texto_plano", "severidad": "CRÍTICO",
+        "patrones": ["password", "contrasena", "pwd", "clave"],
+        "parametros": {"excepto_si_contiene": ["hash", "verify", "null"]},
+        "owasp_2021": "A04:2021", "owasp_2025": "A06:2025", "cwe": "CWE-256",
+        "mensaje": "{detalle} Indica que la contraseña se guarda o transmite sin hash (CWE-256).",
+        "recomendacion": "Guardar solo un hash con sal (PasswordHasher de ASP.NET Identity, PBKDF2) y comparar con su verificador.",
+    },
+]
+
+for r in REGLAS:
+    r.setdefault("modulo", M)
+    r.setdefault("categoria", C)

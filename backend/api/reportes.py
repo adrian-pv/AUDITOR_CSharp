@@ -29,11 +29,11 @@ from sqlalchemy.orm import Session, selectinload
 
 from api.esquemas import CriteriosIn, EstadoHallazgoIn
 from autenticacion.tokens import requiere_rol, usuario_actual
-from engine.ast_bridge import RoslynBridgeNotBuilt, parse_solution
-from engine.orchestrator import REGLAS_REGISTRADAS, calcular_metricas, run_engine
-from engine.rule_base import Estado
+from engine.ast_bridge import RoslynBridgeNotBuilt, es_archivo_de_proyecto, parse_solution
+from engine.orchestrator import calcular_metricas, run_engine
+from api.reglas import regla_a_def
 from persistencia.database import obtener_sesion
-from persistencia.modelos import Hallazgo, Proyecto, Regla, Reporte, ReporteRegla, Rol, Usuario
+from persistencia.modelos import ESTADOS_HALLAZGO, Hallazgo, Proyecto, Regla, Reporte, ReporteRegla, Rol, Usuario
 
 router = APIRouter(prefix="/api", tags=["Reportes"])
 
@@ -73,6 +73,9 @@ def _hallazgo_a_dict(h: Hallazgo) -> dict:
         "descripcion": h.descripcion,
         "recomendacion": h.recomendacion,
         "estado": h.estado,
+        "owasp_2021": h.regla.owasp_2021,
+        "owasp_2025": h.regla.owasp_2025,
+        "cwe": h.regla.cwe,
     }
 
 
@@ -153,7 +156,9 @@ async def analizar(
     nombre_proyecto = _nombre_proyecto(archivos)
 
     # Por defecto, todas las reglas activas del catálogo; el desarrollador puede quitar algunas.
-    activas = set(sesion.scalars(select(Regla.codigo).where(Regla.activa.is_(True))))
+    activas = set(
+        sesion.scalars(select(Regla.codigo).where(Regla.activa.is_(True), Regla.tipo_deteccion.is_not(None)))
+    )
     if reglas:
         pedidas = {c.strip() for c in reglas.split(",") if c.strip()}
         elegidas = activas & pedidas
@@ -165,7 +170,9 @@ async def analizar(
     with tempfile.TemporaryDirectory() as tmp:
         raiz = Path(tmp)
         for archivo in archivos:
-            if not archivo.filename or not archivo.filename.endswith(".cs"):
+            if not archivo.filename or not (
+                archivo.filename.endswith(".cs") or es_archivo_de_proyecto(archivo.filename)
+            ):
                 continue
             destino = _ruta_segura(raiz, archivo.filename)
             if destino is None:
@@ -180,7 +187,8 @@ async def analizar(
         except Exception as exc:  # errores del propio RoslynBridge (código inválido, etc.)
             return {"error": f"No se pudo analizar el código: {exc}"}
 
-    resultado = run_engine(ast_files, [r for r in REGLAS_REGISTRADAS if r.id in elegidas])
+    reglas_bd = sesion.scalars(select(Regla).where(Regla.codigo.in_(elegidas))).all()
+    resultado = run_engine(ast_files, [regla_a_def(r) for r in reglas_bd])
 
     proyecto = sesion.scalar(
         select(Proyecto).where(Proyecto.nombre == nombre_proyecto, Proyecto.propietario_id == usuario.id)
@@ -310,9 +318,9 @@ def evaluar_hallazgo(
     _: Usuario = Depends(requiere_rol(Rol.AUDITOR, Rol.ADMINISTRADOR)),
     sesion: Session = Depends(obtener_sesion),
 ):
-    validos = [e.value for e in Estado]
+    validos = ESTADOS_HALLAZGO
     if datos.estado not in validos:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, f"Estado inválido. Use: {', '.join(validos)}.")
+        raise HTTPException(422, f"Estado inválido. Use: {', '.join(validos)}.")
     hallazgo = sesion.get(Hallazgo, hallazgo_id)
     if hallazgo is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Hallazgo no encontrado.")

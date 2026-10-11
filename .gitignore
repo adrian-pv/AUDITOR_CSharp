@@ -9,3 +9,6 @@ reporte.json
 backend/reports/
 backend/data/
 backend/.env
+
+# Configuración local de Claude (no se sube al repositorio)
+.claude/

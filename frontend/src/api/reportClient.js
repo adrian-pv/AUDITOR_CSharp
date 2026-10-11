@@ -16,8 +16,11 @@ export async function fetchSampleReport() {
  * datos a nombre del usuario con sesión, y lo devuelve.
  */
 export async function analyzeFolder(files, reglas = null) {
-  const archivosCs = files.filter((f) => f.name.endsWith(".cs"));
-  if (archivosCs.length === 0) {
+  // Código C# más archivos de proyecto (.csproj: dependencias) y configuración (appsettings*.json).
+  const esProyecto = (n) => n.endsWith(".csproj") || (n.startsWith("appsettings") && n.endsWith(".json"));
+  const ignorada = (f) => /(^|\/)(bin|obj|node_modules|\.git|\.vs)\//.test(f.webkitRelativePath || "");
+  const archivosCs = files.filter((f) => !ignorada(f) && (f.name.endsWith(".cs") || esProyecto(f.name.toLowerCase())));
+  if (!archivosCs.some((f) => f.name.endsWith(".cs"))) {
     throw new Error("La carpeta seleccionada no contiene archivos .cs");
   }
 
