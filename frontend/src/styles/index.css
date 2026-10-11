@@ -5,3 +5,27 @@
 body {
   @apply bg-stone-50 text-stone-900 antialiased;
 }
+
+@layer components {
+  /* Respuesta táctil al presionar botones principales */
+  .btn-press {
+    @apply transition-transform duration-100 active:scale-[0.97];
+  }
+  /* Bloque gris animado mientras carga el contenido */
+  .skeleton {
+    @apply rounded bg-stone-200/70 animate-shimmer;
+    background-image: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.6) 50%, transparent 100%);
+    background-size: 200% 100%;
+  }
+}
+
+/* Quien tenga activada la opción de reducir movimiento no ve animaciones */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

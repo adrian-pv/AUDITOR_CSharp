@@ -11,6 +11,7 @@ import HistoryView, { formatearFecha } from "./components/HistoryView";
 import ProfileView from "./components/ProfileView";
 import UsersView from "./components/UsersView";
 import AnalyzeDialog from "./components/AnalyzeDialog";
+import { useToast } from "./ui/Toast";
 
 const TITULOS = {
   dashboard: "Panel General",
@@ -39,6 +40,7 @@ export default function App() {
 
 function Workspace() {
   const { puedeAnalizar } = useAuth();
+  const toast = useToast();
   const [view, setView] = useState("dashboard");
   const [report, setReport] = useState(null);
   const [openFile, setOpenFile] = useState(null);
@@ -106,9 +108,11 @@ function Workspace() {
     setAnalizando(true);
     setError(null);
     try {
-      setReport(await analyzeFolder(files, reglasElegidas.current));
+      const nuevo = await analyzeFolder(files, reglasElegidas.current);
+      setReport(nuevo);
       setOpenFile(null);
       setView("dashboard");
+      toast(`Análisis de ${nuevo.proyecto} completado: ${nuevo.stats.vulnerabilidades} hallazgo(s).`);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -122,12 +126,19 @@ function Workspace() {
     <div className="h-screen flex bg-stone-50">
       <Sidebar active={view} onNavigate={setView} />
       <main className="flex-1 overflow-y-auto">
-        <header className="h-14 border-b border-stone-200 flex items-center justify-between px-8 gap-4">
+        <header className="relative h-14 border-b border-stone-200 flex items-center justify-between px-8 gap-4 bg-stone-50/90 backdrop-blur sticky top-0 z-20">
+          {/* barra de progreso mientras corre el análisis */}
+          {analizando && (
+            <div className="absolute left-0 right-0 -bottom-px h-0.5 overflow-hidden bg-emerald-100">
+              <div className="h-full w-2/5 bg-emerald-600 animate-progreso" />
+            </div>
+          )}
           <div className="flex items-center gap-3 min-w-0">
             <h1 className="text-[13px] text-stone-900 font-medium shrink-0">{TITULOS[view]}</h1>
             {report && VISTAS_DE_REPORTE.has(view) && (
               <span
-                className={`text-[10.5px] px-1.5 py-0.5 rounded truncate ${
+                key={report.reporte_id || "muestra"}
+                className={`animate-fade-in text-[10.5px] px-1.5 py-0.5 rounded truncate ${
                   esReal
                     ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                     : "bg-stone-100 text-stone-500 border border-stone-200"
@@ -144,7 +155,7 @@ function Workspace() {
             <button
               onClick={elegirCarpeta}
               disabled={analizando}
-              className="shrink-0 flex items-center gap-2 text-[12.5px] px-3 py-1.5 rounded-md border border-stone-300 text-stone-700 hover:bg-stone-100 disabled:opacity-50"
+              className="btn-press shrink-0 flex items-center gap-2 text-[12.5px] px-3 py-1.5 rounded-md border border-stone-300 bg-white text-stone-700 hover:bg-stone-100 hover:border-stone-400 transition-colors disabled:opacity-60"
             >
               {analizando ? <Loader2 size={14} className="animate-spin" /> : <FolderSearch size={14} />}
               {analizando ? "Analizando…" : "Analizar carpeta…"}
@@ -164,14 +175,13 @@ function Workspace() {
         </header>
 
         {error && (
-          <div className="mx-8 mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-2.5 text-[12.5px] text-red-700">
+          <div className="animate-fade-up mx-8 mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-2.5 text-[12.5px] text-red-700">
             {error}
           </div>
         )}
 
-        {!report && VISTAS_DE_REPORTE.has(view) && (
-          <div className="p-8 text-stone-400 text-sm">Cargando reporte…</div>
-        )}
+        {!report && VISTAS_DE_REPORTE.has(view) && <EsqueletoReporte />}
+        <div key={view} className="animate-fade-up">
         {report && view === "dashboard" && (
           <DashboardView report={report} onOpenFile={goToFile} onReporteActualizado={setReport} />
         )}
@@ -188,11 +198,36 @@ function Workspace() {
         {view === "rules" && <RulesView />}
         {view === "users" && <UsersView />}
         {view === "profile" && <ProfileView />}
+        </div>
 
         {dialogoAbierto && (
           <AnalyzeDialog onCancelar={() => setDialogoAbierto(false)} onContinuar={onReglasElegidas} />
         )}
       </main>
+    </div>
+  );
+}
+
+function EsqueletoReporte() {
+  return (
+    <div className="p-8 max-w-5xl space-y-8" aria-label="Cargando reporte">
+      <div className="grid grid-cols-4 gap-3">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="bg-white border border-stone-200 rounded-lg p-4 space-y-2">
+            <div className="skeleton h-3 w-24" />
+            <div className="skeleton h-6 w-16" />
+          </div>
+        ))}
+      </div>
+      <div className="bg-white border border-stone-200 rounded-lg divide-y divide-stone-100">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div key={i} className="flex gap-4 px-4 py-3.5">
+            <div className="skeleton h-3 w-14" />
+            <div className="skeleton h-3 flex-1" />
+            <div className="skeleton h-3 w-28" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

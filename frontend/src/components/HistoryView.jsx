@@ -36,8 +36,21 @@ export default function HistoryView({ reporteActual, onAbrir }) {
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-2.5 text-[12.5px] text-red-700">{error}</div>
       )}
 
+      {!reportes && !error && (
+        <div className="border border-stone-200 rounded-lg bg-white divide-y divide-stone-100">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="flex gap-6 px-4 py-3.5">
+              <div className="skeleton h-3 w-32" />
+              <div className="skeleton h-3 w-28" />
+              <div className="skeleton h-3 flex-1" />
+              <div className="skeleton h-3 w-10" />
+            </div>
+          ))}
+        </div>
+      )}
+
       {reportes && reportes.length === 0 && (
-        <div className="border border-dashed border-stone-300 rounded-lg bg-white p-10 text-center">
+        <div className="animate-fade-up border border-dashed border-stone-300 rounded-lg bg-white p-10 text-center">
           <History size={20} className="mx-auto text-stone-400" />
           <p className="text-[13px] text-stone-700 mt-3">Todavía no hay reportes.</p>
           <p className="text-[12px] text-stone-500 mt-1">
@@ -62,13 +75,14 @@ export default function HistoryView({ reporteActual, onAbrir }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-200">
-              {reportes.map((r) => {
+              {reportes.map((r, i) => {
                 const activo = r.reporte_id === reporteActual;
                 return (
                   <tr
                     key={r.reporte_id}
                     onClick={() => onAbrir(r.reporte_id)}
-                    className={`cursor-pointer ${activo ? "bg-stone-100" : "hover:bg-stone-50"}`}
+                    style={{ animationDelay: `${Math.min(i, 12) * 25}ms` }}
+                    className={`animate-fade-up cursor-pointer transition-colors ${activo ? "bg-emerald-50/60" : "hover:bg-stone-50"}`}
                   >
                     <td className="px-4 py-2.5 font-mono text-[12.5px] text-stone-800">{r.proyecto}</td>
                     <td className="px-4 py-2.5 text-stone-600">{formatearFecha(r.generado_en)}</td>

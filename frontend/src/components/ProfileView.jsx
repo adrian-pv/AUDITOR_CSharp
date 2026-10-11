@@ -9,7 +9,7 @@ function Mensaje({ estado }) {
   if (!estado) return null;
   const ok = estado.tipo === "ok";
   return (
-    <p className={`text-[12px] mt-3 ${ok ? "text-emerald-700" : "text-red-700"}`}>{estado.texto}</p>
+    <p key={estado.texto} className={`text-[12px] mt-3 ${ok ? "animate-fade-up text-emerald-700" : "animate-shake text-red-700"}`}>{estado.texto}</p>
   );
 }
 

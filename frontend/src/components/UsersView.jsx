@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { UserPlus } from "lucide-react";
 import { crearUsuario, listarUsuarios, modificarUsuario } from "../api/adminClient";
 import { useAuth } from "../auth/AuthContext";
+import Switch from "../ui/Switch";
+import { useToast } from "../ui/Toast";
 
 const ROLES = ["Administrador", "Desarrollador", "Auditor"];
 const DESCRIPCION_ROL = {
@@ -20,7 +22,8 @@ export default function UsersView() {
   const [usuarios, setUsuarios] = useState([]);
   const [nuevo, setNuevo] = useState(VACIO);
   const [error, setError] = useState(null);
-  const [ok, setOk] = useState(null);
+  const [guardando, setGuardando] = useState(null);
+  const toast = useToast();
 
   const cargar = () => listarUsuarios().then(setUsuarios).catch((e) => setError(e.message));
   useEffect(() => {
@@ -30,25 +33,29 @@ export default function UsersView() {
   const crear = async (e) => {
     e.preventDefault();
     setError(null);
-    setOk(null);
     try {
       const u = await crearUsuario(nuevo);
       setNuevo(VACIO);
-      setOk(`Usuario ${u.correo} creado como ${u.rol}.`);
+      toast(`Usuario ${u.correo} creado como ${u.rol}.`);
       cargar();
     } catch (err) {
       setError(err.message);
     }
   };
 
-  const cambiar = async (id, cambios) => {
+  // Cambio optimista: se ve al instante y se revierte si el servidor lo rechaza.
+  const cambiar = async (u, cambios, mensaje) => {
     setError(null);
-    setOk(null);
+    setUsuarios((prev) => prev.map((x) => (x.id === u.id ? { ...x, ...cambios } : x)));
+    setGuardando(u.id);
     try {
-      await modificarUsuario(id, cambios);
-      cargar();
+      await modificarUsuario(u.id, cambios);
+      toast(mensaje);
     } catch (err) {
-      setError(err.message);
+      setUsuarios((prev) => prev.map((x) => (x.id === u.id ? u : x)));
+      toast(err.message, "error");
+    } finally {
+      setGuardando(null);
     }
   };
 
@@ -80,17 +87,14 @@ export default function UsersView() {
             </select>
           </div>
           <p className="text-[11.5px] text-stone-500 sm:col-span-2 lg:col-span-3">{DESCRIPCION_ROL[nuevo.rol]}</p>
-          <button className="h-9 px-4 rounded-md bg-stone-900 text-white text-[12.5px] hover:bg-stone-800">
+          <button className="btn-press h-9 px-4 rounded-md bg-stone-900 text-white text-[12.5px] hover:bg-stone-800">
             Crear usuario
           </button>
         </form>
       </section>
 
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-2.5 text-[12.5px] text-red-700">{error}</div>
-      )}
-      {ok && (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-[12.5px] text-emerald-700">{ok}</div>
+        <div key={error} className="animate-shake rounded-md border border-red-200 bg-red-50 px-4 py-2.5 text-[12.5px] text-red-700">{error}</div>
       )}
 
       <section className="border border-stone-200 rounded-lg bg-white overflow-x-auto">
@@ -104,8 +108,8 @@ export default function UsersView() {
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-200">
-            {usuarios.map((u) => (
-              <tr key={u.id}>
+            {usuarios.map((u, i) => (
+              <tr key={u.id} style={{ animationDelay: `${i * 30}ms` }} className={`animate-fade-up transition-colors hover:bg-stone-50/70 ${u.activo ? "" : "text-stone-400"}`}>
                 <td className="px-4 py-2.5 text-stone-800">
                   {u.nombre}
                   {u.id === yo.id && <span className="ml-2 text-[10.5px] text-stone-400">(usted)</span>}
@@ -114,7 +118,7 @@ export default function UsersView() {
                 <td className="px-4 py-2.5">
                   <select
                     value={u.rol}
-                    onChange={(e) => cambiar(u.id, { rol: e.target.value })}
+                    onChange={(e) => cambiar(u, { rol: e.target.value }, `${u.nombre} ahora es ${e.target.value}.`)}
                     className="h-8 rounded-md border border-stone-300 bg-white px-2 text-[12.5px]"
                   >
                     {ROLES.map((r) => (
@@ -123,13 +127,16 @@ export default function UsersView() {
                   </select>
                 </td>
                 <td className="px-4 py-2.5">
-                  <button
-                    onClick={() => cambiar(u.id, { activo: !u.activo })}
-                    className={`text-[12px] ${u.activo ? "text-emerald-700" : "text-stone-400"}`}
-                    title={u.activo ? "Clic para desactivar" : "Clic para activar"}
-                  >
-                    {u.activo ? "Activo" : "Inactivo"}
-                  </button>
+                  <Switch
+                    checked={u.activo}
+                    onChange={(v) => cambiar(u, { activo: v }, `Cuenta de ${u.nombre} ${v ? "activada" : "desactivada"}.`)}
+                    cargando={guardando === u.id}
+                    disabled={u.id === yo.id}
+                    tamano="sm"
+                    mostrarTexto
+                    textos={["Activo", "Inactivo"]}
+                    etiqueta={u.id === yo.id ? "No puede desactivar su propia cuenta" : `${u.activo ? "Desactivar" : "Activar"} a ${u.nombre}`}
+                  />
                 </td>
               </tr>
             ))}

@@ -1,9 +1,15 @@
 import { useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, FileCode2 } from "lucide-react";
+import { ChevronRight, FileCode2 } from "lucide-react";
+import { useToast } from "../ui/Toast";
 import { evaluarHallazgo } from "../api/reportClient";
 import { useAuth } from "../auth/AuthContext";
 
 const ESTADOS = ["Pendiente", "Solucionado", "Fallido"];
+const ESTADO_COLOR = {
+  Pendiente: "bg-white border-stone-300 text-stone-700",
+  Solucionado: "bg-emerald-50 border-emerald-300 text-emerald-800",
+  Fallido: "bg-red-50 border-red-300 text-red-800",
+};
 
 const SEVERITY_TEXT = {
   CRÍTICO: "text-red-700 bg-red-50 border-red-200",
@@ -13,6 +19,7 @@ const SEVERITY_TEXT = {
 
 export default function AnalyzerView({ report, openFile, onSelectFile, onHallazgoEvaluado }) {
   const { puedeEvaluar } = useAuth();
+  const toast = useToast();
   const [errorEval, setErrorEval] = useState(null);
   // Solo los reportes guardados en la BD tienen hallazgo_id (el de muestra no).
   const evaluable = puedeEvaluar && report.reporte_id;
@@ -22,6 +29,7 @@ export default function AnalyzerView({ report, openFile, onSelectFile, onHallazg
     try {
       await evaluarHallazgo(h.hallazgo_id, estado);
       onHallazgoEvaluado?.(h.hallazgo_id, estado);
+      toast(`${h.id} (línea ${h.linea}) marcado como ${estado}.`);
     } catch (err) {
       setErrorEval(err.message);
     }
@@ -64,13 +72,13 @@ export default function AnalyzerView({ report, openFile, onSelectFile, onHallazg
             <div key={archivo}>
               <button
                 onClick={() => toggle(archivo)}
-                className="w-full flex items-center gap-2.5 px-4 py-3 text-left hover:bg-stone-50"
+                aria-expanded={isOpen}
+                className="w-full flex items-center gap-2.5 px-4 py-3 text-left hover:bg-stone-50 transition-colors"
               >
-                {isOpen ? (
-                  <ChevronDown size={14} className="text-stone-400 shrink-0" />
-                ) : (
-                  <ChevronRight size={14} className="text-stone-400 shrink-0" />
-                )}
+                <ChevronRight
+                  size={14}
+                  className={`text-stone-400 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`}
+                />
                 <FileCode2 size={14} className="text-stone-400 shrink-0" />
                 <span className="font-mono text-[12.5px] text-stone-800 flex-1">{archivo}</span>
                 <span className="text-[11px] text-stone-500">
@@ -78,7 +86,14 @@ export default function AnalyzerView({ report, openFile, onSelectFile, onHallazg
                 </span>
               </button>
 
-              {isOpen && (
+              {/* expansión suave: la fila pasa de 0fr a 1fr de alto */}
+              <div
+                className={`grid transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(.2,.8,.2,1)] ${
+                  isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                }`}
+                aria-hidden={!isOpen}
+              >
+                <div className="overflow-hidden">
                 <div className="px-4 pb-4 pl-10 space-y-3">
                   {hallazgos.map((h) => (
                     <div
@@ -107,22 +122,25 @@ export default function AnalyzerView({ report, openFile, onSelectFile, onHallazg
                         Estado:
                         {evaluable ? (
                           <select
+                            key={h.estado}
                             value={h.estado}
                             onChange={(e) => cambiarEstado(h, e.target.value)}
-                            className="h-7 rounded border border-stone-300 bg-white px-1.5 text-[11.5px] text-stone-700"
+                            tabIndex={isOpen ? 0 : -1}
+                            className={`animate-pop h-7 rounded border px-1.5 text-[11.5px] transition-colors ${ESTADO_COLOR[h.estado]}`}
                           >
                             {ESTADOS.map((e) => (
                               <option key={e}>{e}</option>
                             ))}
                           </select>
                         ) : (
-                          <span className="text-stone-700">{h.estado}</span>
+                          <span className={`rounded border px-1.5 py-0.5 ${ESTADO_COLOR[h.estado]}`}>{h.estado}</span>
                         )}
                       </div>
                     </div>
                   ))}
                 </div>
-              )}
+                </div>
+              </div>
             </div>
           );
         })}

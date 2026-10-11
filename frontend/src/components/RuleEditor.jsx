@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { actualizarRegla, crearRegla } from "../api/adminClient";
 import ListaChips from "./ListaChips";
+import Modal from "../ui/Modal";
+import Switch from "../ui/Switch";
 
 const inputCls =
   "w-full h-9 rounded-md border border-stone-300 bg-white px-3 text-[13px] outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900 disabled:bg-stone-50 disabled:text-stone-500";
@@ -90,8 +92,8 @@ export default function RuleEditor({ regla, catalogo, soloLectura, onCerrar, onG
   const des = soloLectura;
 
   return (
-    <div className="fixed inset-0 z-50 bg-stone-900/40 flex items-start justify-center overflow-y-auto px-4 py-8" onClick={onCerrar}>
-      <form onSubmit={guardar} onClick={(e) => e.stopPropagation()} className="w-full max-w-3xl bg-white rounded-lg border border-stone-200 shadow-xl">
+    <Modal onCerrar={onCerrar} ancho="max-w-3xl" arriba>
+      <form onSubmit={guardar} className="w-full bg-white rounded-lg border border-stone-200 shadow-xl">
         <div className="flex items-start justify-between px-6 py-4 border-b border-stone-200">
           <div>
             <p className="text-[15px] font-medium text-stone-900">
@@ -111,6 +113,14 @@ export default function RuleEditor({ regla, catalogo, soloLectura, onCerrar, onG
         </div>
 
         <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="sm:col-span-2 flex items-center justify-between rounded-md border border-stone-200 bg-stone-50 px-3 py-2.5">
+            <div>
+              <p className="text-[12.5px] font-medium text-stone-800">Regla activa</p>
+              <p className="text-[11px] text-stone-500">Las reglas inactivas no se ofrecen en los análisis.</p>
+            </div>
+            <Switch checked={datos.activa} onChange={(v) => set("activa", v)} disabled={des} mostrarTexto etiqueta="Regla activa" />
+          </div>
+
           <Campo etiqueta="Nombre de la regla" className="sm:col-span-2">
             <input className={inputCls} value={datos.nombre} onChange={(e) => set("nombre", e.target.value)} required minLength={3} disabled={des} />
           </Campo>
@@ -186,10 +196,7 @@ export default function RuleEditor({ regla, catalogo, soloLectura, onCerrar, onG
             Object.entries(detector.parametros).map(([nombre, def]) => (
               <Campo key={nombre} etiqueta={nombre.replaceAll("_", " ")} ayuda={def.descripcion} className={def.tipo === "lista" ? "sm:col-span-2" : ""}>
                 {def.tipo === "booleano" && (
-                  <label className="flex items-center gap-2 text-[13px] text-stone-700">
-                    <input type="checkbox" className="accent-stone-900" checked={!!datos.parametros[nombre]} onChange={(e) => setParam(nombre, e.target.checked)} disabled={des} />
-                    Activado
-                  </label>
+                  <Switch checked={!!datos.parametros[nombre]} onChange={(v) => setParam(nombre, v)} disabled={des} etiqueta={nombre} />
                 )}
                 {def.tipo === "opcion" && (
                   <select className={inputCls} value={datos.parametros[nombre] ?? def.defecto} onChange={(e) => setParam(nombre, e.target.value)} disabled={des}>
@@ -215,20 +222,20 @@ export default function RuleEditor({ regla, catalogo, soloLectura, onCerrar, onG
           </Campo>
         </div>
 
-        {error && <p className="mx-6 mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[12.5px] text-red-700">{error}</p>}
+        {error && <p key={error} className="animate-shake mx-6 mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-[12.5px] text-red-700">{error}</p>}
 
         <div className="flex justify-end gap-2 px-6 py-3 border-t border-stone-200">
           <button type="button" onClick={onCerrar} className="h-9 px-4 rounded-md text-[12.5px] text-stone-600 hover:bg-stone-100">
             {des ? "Cerrar" : "Cancelar"}
           </button>
           {!des && (
-            <button disabled={guardando} className="h-9 px-4 rounded-md bg-stone-900 text-white text-[12.5px] hover:bg-stone-800 disabled:opacity-60 flex items-center gap-2">
+            <button disabled={guardando} className="btn-press h-9 px-4 rounded-md bg-stone-900 text-white text-[12.5px] hover:bg-stone-800 disabled:opacity-60 flex items-center gap-2">
               {guardando && <Loader2 size={14} className="animate-spin" />}
               {esNueva ? "Crear regla" : "Guardar cambios"}
             </button>
           )}
         </div>
       </form>
-    </div>
+    </Modal>
   );
 }

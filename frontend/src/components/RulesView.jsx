@@ -3,6 +3,8 @@ import { Plus } from "lucide-react";
 import { cambiarRegla, listarReglas, plantillasDeReglas } from "../api/adminClient";
 import { useAuth } from "../auth/AuthContext";
 import RuleEditor from "./RuleEditor";
+import Switch from "../ui/Switch";
+import { useToast } from "../ui/Toast";
 
 const SEVERITY_TEXT = {
   CRÍTICO: "text-red-700",
@@ -29,10 +31,10 @@ function Cobertura({ titulo, categorias, reglas, campo }) {
             <div
               key={codigo}
               title={`${codigo} ${nombre}: ${n} regla(s) activa(s)`}
-              className={`rounded-md border px-1.5 py-1.5 text-center ${n ? "border-stone-300 bg-white" : "border-dashed border-stone-300 bg-stone-50"}`}
+              className={`rounded-md border px-1.5 py-1.5 text-center transition-colors duration-300 ${n ? "border-emerald-200 bg-emerald-50/40" : "border-dashed border-stone-300 bg-stone-50"}`}
             >
               <p className={`font-mono text-[11px] ${n ? "text-stone-800" : "text-stone-400"}`}>{codigo.slice(0, 3)}</p>
-              <p className={`text-[15px] font-semibold leading-tight ${n ? "text-emerald-700" : "text-stone-300"}`}>{n}</p>
+              <p key={n} className={`animate-pop text-[15px] font-semibold leading-tight tabular-nums ${n ? "text-emerald-700" : "text-stone-300"}`}>{n}</p>
             </div>
           );
         })}
@@ -49,7 +51,8 @@ export default function RulesView() {
   const [filtro, setFiltro] = useState("todos");
   const [editando, setEditando] = useState(undefined); // undefined = cerrado, null = nueva
   const [error, setError] = useState(null);
-  const [aviso, setAviso] = useState(null);
+  const [guardando, setGuardando] = useState(null); // código de la regla que se está guardando
+  const toast = useToast();
 
   useEffect(() => {
     Promise.all([listarReglas(), plantillasDeReglas()])
@@ -66,19 +69,26 @@ export default function RulesView() {
   );
   const visibles = filtro === "todos" ? reglas : reglas.filter((r) => r.modulo === filtro);
 
+  // Cambio optimista: el interruptor se mueve al instante y se revierte si el servidor falla.
   const toggleRegla = async (regla) => {
-    setError(null);
+    const nuevo = !regla.activa;
+    setReglas((prev) => prev.map((r) => (r.codigo === regla.codigo ? { ...r, activa: nuevo } : r)));
+    setGuardando(regla.codigo);
     try {
-      const actualizada = await cambiarRegla(regla.codigo, !regla.activa);
+      const actualizada = await cambiarRegla(regla.codigo, nuevo);
       setReglas((prev) => prev.map((r) => (r.codigo === actualizada.codigo ? actualizada : r)));
+      toast(`${regla.codigo} ${nuevo ? "activada" : "desactivada"}.`);
     } catch (err) {
-      setError(err.message);
+      setReglas((prev) => prev.map((r) => (r.codigo === regla.codigo ? { ...r, activa: regla.activa } : r)));
+      toast(err.message, "error");
+    } finally {
+      setGuardando(null);
     }
   };
 
   const onGuardada = (r) => {
     setReglas((prev) => (prev.some((x) => x.codigo === r.codigo) ? prev.map((x) => (x.codigo === r.codigo ? r : x)) : [...prev, r]));
-    setAviso(`Regla ${r.codigo} guardada. Se aplicará desde el próximo análisis.`);
+    toast(`Regla ${r.codigo} guardada. Se aplicará desde el próximo análisis.`);
     setEditando(undefined);
   };
 
@@ -89,12 +99,7 @@ export default function RulesView() {
           <p className="text-[13px] font-medium text-stone-900">Gatekeeper de gobierno de código</p>
           <p className="text-[12px] text-stone-500 mt-0.5">Bloquea el commit o despliegue si la densidad de errores supera el umbral configurado.</p>
         </div>
-        <button
-          onClick={() => setGatekeeper((v) => !v)}
-          className={`shrink-0 w-10 h-6 rounded-full relative transition-colors ${gatekeeper ? "bg-stone-900" : "bg-stone-300"}`}
-        >
-          <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all ${gatekeeper ? "left-[19px]" : "left-0.5"}`} />
-        </button>
+        <Switch checked={gatekeeper} onChange={setGatekeeper} etiqueta="Gatekeeper de gobierno de código" />
       </div>
 
       {catalogo && (
@@ -108,8 +113,7 @@ export default function RulesView() {
         </div>
       )}
 
-      {error && <div className="rounded-md border border-red-200 bg-red-50 px-4 py-2.5 text-[12.5px] text-red-700">{error}</div>}
-      {aviso && <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-[12.5px] text-emerald-700">{aviso}</div>}
+      {error && <div className="animate-fade-up rounded-md border border-red-200 bg-red-50 px-4 py-2.5 text-[12.5px] text-red-700">{error}</div>}
 
       <div className="border border-stone-200 rounded-lg bg-white">
         <div className="px-4 py-3 flex flex-wrap items-center gap-3 border-b border-stone-200">
@@ -119,7 +123,7 @@ export default function RulesView() {
               <button
                 key={valor}
                 onClick={() => setFiltro(valor)}
-                className={`text-[12px] px-2.5 py-1 rounded-md ${filtro === valor ? "bg-stone-900 text-white" : "text-stone-600 hover:bg-stone-100"}`}
+                className={`btn-press text-[12px] px-2.5 py-1 rounded-md transition-colors duration-150 ${filtro === valor ? "bg-stone-900 text-white" : "text-stone-600 hover:bg-stone-100"}`}
               >
                 {etiqueta}
               </button>
@@ -128,16 +132,20 @@ export default function RulesView() {
           {esAdmin && catalogo && (
             <button
               onClick={() => setEditando(null)}
-              className="ml-auto h-8 px-3 rounded-md bg-stone-900 text-white text-[12px] hover:bg-stone-800 flex items-center gap-1.5"
+              className="btn-press ml-auto h-8 px-3 rounded-md bg-stone-900 text-white text-[12px] hover:bg-stone-800 transition-colors flex items-center gap-1.5"
             >
               <Plus size={13} /> Nueva regla
             </button>
           )}
         </div>
 
-        <div className="divide-y divide-stone-200">
-          {visibles.map((r) => (
-            <div key={r.codigo} className="flex items-center gap-4 px-4 py-3">
+        <div key={filtro} className="divide-y divide-stone-200">
+          {visibles.map((r, i) => (
+            <div
+              key={r.codigo}
+              style={{ animationDelay: `${Math.min(i, 15) * 20}ms` }}
+              className={`animate-fade-up flex items-center gap-4 px-4 py-3 transition-colors hover:bg-stone-50/70 ${r.activa ? "" : "bg-stone-50/60"}`}
+            >
               <span className="font-mono text-[12px] text-stone-500 w-16 shrink-0">{r.codigo}</span>
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] text-stone-800 truncate">{r.nombre}</p>
@@ -154,13 +162,15 @@ export default function RulesView() {
                 ))}
               </div>
               <span className={`text-[11px] w-20 shrink-0 ${SEVERITY_TEXT[r.severidad]}`}>{r.severidad}</span>
-              <button
-                onClick={() => toggleRegla(r)}
+              <Switch
+                checked={r.activa}
+                onChange={() => toggleRegla(r)}
                 disabled={!esAdmin}
-                className={`text-[12px] shrink-0 w-14 text-right disabled:cursor-default ${r.activa ? "text-emerald-700" : "text-stone-400"}`}
-              >
-                {r.activa ? "Activa" : "Inactiva"}
-              </button>
+                cargando={guardando === r.codigo}
+                tamano="sm"
+                mostrarTexto
+                etiqueta={`${r.activa ? "Desactivar" : "Activar"} ${r.codigo}`}
+              />
               <button onClick={() => setEditando(r)} className="text-[12px] shrink-0 w-12 text-right text-stone-600 hover:text-stone-900 underline-offset-2 hover:underline">
                 {esAdmin ? "Editar" : "Ver"}
               </button>

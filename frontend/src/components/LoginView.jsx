@@ -8,6 +8,7 @@ export default function LoginView() {
   const [contrasena, setContrasena] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
+  const [intentos, setIntentos] = useState(0); // para repetir la animación en cada error
 
   const enviar = async (e) => {
     e.preventDefault();
@@ -17,6 +18,7 @@ export default function LoginView() {
       await login(correo, contrasena);
     } catch (err) {
       setError(err.message);
+      setIntentos((n) => n + 1);
     } finally {
       setEnviando(false);
     }
@@ -25,7 +27,7 @@ export default function LoginView() {
   return (
     <div className="min-h-screen flex bg-stone-50">
       {/* Panel de marca */}
-      <aside className="hidden md:flex w-[42%] max-w-xl bg-stone-900 text-stone-100 flex-col justify-between p-10">
+      <aside className="animate-fade-in hidden md:flex w-[42%] max-w-xl bg-stone-900 text-stone-100 flex-col justify-between p-10">
         <div>
           <p className="font-mono text-[15px] font-semibold">AUDITOR_C#</p>
           <p className="text-[12px] text-stone-400 mt-1">Gobierno &amp; auditoría continua</p>
@@ -45,7 +47,7 @@ export default function LoginView() {
 
       {/* Formulario */}
       <main className="flex-1 flex items-center justify-center px-4 py-10">
-        <form onSubmit={enviar} className="w-full max-w-sm">
+        <form onSubmit={enviar} className="animate-fade-up w-full max-w-sm">
           <div className="md:hidden mb-8">
             <p className="font-mono text-[15px] font-semibold text-stone-900">AUDITOR_C#</p>
             <p className="text-[12px] text-stone-500 mt-0.5">Gobierno &amp; auditoría continua</p>
@@ -60,7 +62,7 @@ export default function LoginView() {
           </p>
 
           {(error || aviso) && (
-            <div className="mb-5 rounded-md border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12.5px] text-red-700">
+            <div key={intentos} className="animate-shake mb-5 rounded-md border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12.5px] text-red-700">
               {error || aviso}
             </div>
           )}
@@ -96,7 +98,7 @@ export default function LoginView() {
           <button
             type="submit"
             disabled={enviando}
-            className="mt-6 w-full h-10 rounded-md bg-stone-900 text-white text-[13.5px] font-medium hover:bg-stone-800 disabled:opacity-60 flex items-center justify-center gap-2"
+            className="btn-press mt-6 w-full h-10 rounded-md bg-stone-900 text-white text-[13.5px] font-medium hover:bg-stone-800 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {enviando && <Loader2 size={15} className="animate-spin" />}
             {enviando ? "Verificando…" : "Iniciar sesión"}

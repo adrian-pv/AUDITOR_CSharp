@@ -15,11 +15,11 @@ function NavButton({ item, active, onNavigate }) {
   return (
     <button
       onClick={() => onNavigate(item.id)}
-      className={`w-full flex items-center gap-2.5 px-3 py-2 text-[13px] rounded-md transition-colors ${
+      className={`btn-press group w-full flex items-center gap-2.5 px-3 py-2 text-[13px] rounded-md transition-colors duration-150 ${
         isActive ? "bg-stone-900 text-white" : "text-stone-600 hover:bg-stone-100"
       }`}
     >
-      <Icon size={15} strokeWidth={1.75} />
+      <Icon size={15} strokeWidth={1.75} className="transition-transform duration-150 group-hover:scale-110" />
       {item.label}
     </button>
   );
