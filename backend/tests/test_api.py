@@ -256,3 +256,68 @@ def test_validaciones_de_regla(cliente):
     seg001 = next(x for x in cliente.get("/api/reglas", headers=admin).json() if x["codigo"] == "SEG-001")
     seg001["tipo_deteccion"] = "llamada_a_metodo"
     assert cliente.put("/api/reglas/SEG-001", headers=admin, json=seg001).status_code == 422
+
+
+# ----------------------------------------------------------------------------- reporte como archivo .json
+
+
+def test_exportar_y_cargar_reporte_json_sin_guardar(cliente):
+    admin = _login(cliente, ADMIN_CORREO, "admin123")
+    dev = _crear(cliente, admin, "json-dev@test.com", "Desarrollador")
+    auditor = _crear(cliente, admin, "json-aud@test.com", "Auditor")
+    rep = _analizar(cliente, dev).json()
+    cliente.put(f"/api/reportes/{rep['reporte_id']}/criterios", headers=auditor, json={"evaluadas": ["SEG-001", "MEM-004"]})
+
+    r = cliente.get(f"/api/reportes/{rep['reporte_id']}/exportar", headers=dev)
+    assert r.status_code == 200
+    assert "attachment" in r.headers["content-disposition"] and ".json" in r.headers["content-disposition"]
+    doc = r.json()
+    assert doc["formato"] == "AUDITOR_CSharp/reporte" and doc["version"] == 1
+    # El archivo trae TODOS los hallazgos, no solo los de los criterios evaluados
+    assert len(doc["hallazgos"]) == len(rep["hallazgos"])
+    assert "hallazgo_id" not in doc["hallazgos"][0]
+
+    historial_antes = len(cliente.get("/api/reportes", headers=admin).json())
+    # Un auditor carga el archivo: se ve igual que el reporte guardado
+    vista = cliente.post("/api/reportes/vista", headers=auditor, json=doc).json()
+    assert vista["importado"] is True
+    guardado = cliente.get(f"/api/reportes/{rep['reporte_id']}", headers=auditor).json()
+    assert vista["stats"] == guardado["stats"]
+    assert vista["cumplimiento_por_modulo"] == guardado["cumplimiento_por_modulo"]
+    # ... y no se guardó nada nuevo
+    assert len(cliente.get("/api/reportes", headers=admin).json()) == historial_antes
+
+
+def test_reporte_cargado_recalcula_metricas_y_no_confia_en_el_archivo(cliente):
+    admin = _login(cliente, ADMIN_CORREO, "admin123")
+    doc = cliente.get(f"/api/reportes/{_analizar(cliente, admin).json()['reporte_id']}/exportar", headers=admin).json()
+
+    doc["stats"] = {"loc_total": doc["loc_total"], "vulnerabilidades": 0, "score_gobierno": 100}  # manipulado
+    vista = cliente.post("/api/reportes/vista", headers=admin, json=doc).json()
+    assert vista["stats"]["vulnerabilidades"] == len(doc["hallazgos"])
+
+    for c in doc["criterios"]:
+        c["evaluada"] = c["codigo"] == "SEG-001"
+    vista = cliente.post("/api/reportes/vista", headers=admin, json=doc).json()
+    assert {h["id"] for h in vista["hallazgos"]} == {"SEG-001"}
+    assert list(vista["cumplimiento_por_modulo"]) == ["Módulo 1: Seguridad"]
+
+
+def test_archivo_json_invalido_se_rechaza(cliente):
+    admin = _login(cliente, ADMIN_CORREO, "admin123")
+    base = {"proyecto": "X", "loc_total": 10, "criterios": [], "hallazgos": []}
+    h = {"id": "SEG-001", "modulo": "Módulo 1: Seguridad", "severidad": "CRÍTICO", "archivo": "a.cs", "linea": 1}
+
+    assert cliente.post("/api/reportes/vista", json=base).status_code == 401
+    assert cliente.post("/api/reportes/vista", headers=admin, json={**base, "formato": "otro"}).status_code == 422
+    assert cliente.post("/api/reportes/vista", headers=admin, json={**base, "version": 99}).status_code == 422
+    malos = [{**h, "severidad": "GRAVE"}, {**h, "estado": "Hackeado"}, {**h, "linea": -1}]
+    for malo in malos:
+        assert cliente.post("/api/reportes/vista", headers=admin, json={**base, "hallazgos": [malo]}).status_code == 422
+    huerfano = {**base, "criterios": [{"codigo": "MEM-004", "modulo": "Módulo 3: Memoria", "severidad": "BAJO"}], "hallazgos": [h]}
+    assert cliente.post("/api/reportes/vista", headers=admin, json=huerfano).status_code == 422
+
+    # Archivos antiguos de la carpeta reports/ (sin formato ni criterios) siguen funcionando
+    antiguo = {"proyecto": "X", "stats": {"loc_total": 50}, "hallazgos": [h]}
+    vista = cliente.post("/api/reportes/vista", headers=admin, json=antiguo).json()
+    assert vista["stats"]["vulnerabilidades"] == 1 and vista["criterios"][0]["codigo"] == "SEG-001"

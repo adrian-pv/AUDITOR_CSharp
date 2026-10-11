@@ -8,6 +8,10 @@ Análisis y reportes.
                                  Auditor / Administrador: elige qué reglas (criterios) evaluar
                                  en ese reporte; el panel y el score se recalculan con ellas.
   PATCH /api/hallazgos/{id}      Auditor / Administrador: evalúa un hallazgo (cambia su estado).
+  GET   /api/reportes/{codigo}/exportar
+                                 Descarga el reporte como archivo .json (todos los hallazgos y criterios).
+  POST  /api/reportes/vista      Cualquier rol: muestra un .json cargado (p. ej. de un tercero) sin
+                                 volver a analizar ni guardar nada en la base de datos.
 
 El análisis corre por defecto con TODAS las reglas activas del catálogo; el
 desarrollador puede quitar algunas antes de analizar (campo `reglas`).
@@ -24,9 +28,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from api.archivo_reporte import FORMATO, VERSION, ReporteArchivo, documento_a_vista
 from api.esquemas import CriteriosIn, EstadoHallazgoIn
 from autenticacion.tokens import requiere_rol, usuario_actual
 from engine.ast_bridge import RoslynBridgeNotBuilt, es_archivo_de_proyecto, parse_solution
@@ -119,6 +125,32 @@ def reporte_a_dict(r: Reporte) -> dict:
             for a in sorted(aplicadas, key=lambda a: (a.regla.modulo, a.regla_codigo))
         ],
     }
+
+
+def documento_reporte(r: Reporte) -> dict:
+    """
+    Reporte como archivo .json: todos los hallazgos (con su estado) y todos los
+    criterios (marcando cuáles evaluó el auditor). Las métricas incluidas son
+    informativas; al cargar el archivo se recalculan.
+    """
+    vista = reporte_a_dict(r)
+    return {
+        "formato": FORMATO,
+        "version": VERSION,
+        "reporte_id": r.codigo,
+        "proyecto": r.proyecto.nombre,
+        "generado_en": _fecha(r),
+        "loc_total": r.loc_total,
+        "stats": vista["stats"],
+        "cumplimiento_por_modulo": vista["cumplimiento_por_modulo"],
+        "criterios": [{k: v for k, v in c.items() if k != "hallazgos"} for c in vista["criterios"]],
+        "hallazgos": [{k: v for k, v in _hallazgo_a_dict(h).items() if k != "hallazgo_id"} for h in r.hallazgos],
+    }
+
+
+def nombre_archivo(proyecto: str, generado_en: datetime) -> str:
+    nombre_seguro = re.sub(r'[^A-Za-z0-9._-]+', "_", proyecto).strip("_") or "proyecto"
+    return f"reporte_{nombre_seguro}_{generado_en:%Y%m%d_%H%M%S}.json"
 
 
 def _respuesta(r: Reporte) -> dict:
@@ -228,10 +260,9 @@ async def analizar(
     # Copia en disco (historial de archivos, como antes): reporte_<proyecto>_<fecha_hora>.json
     reporte = _cargar_reporte(sesion, id=reporte.id)
     CARPETA_REPORTES.mkdir(exist_ok=True)
-    nombre_seguro = re.sub(r'[\\/:*?"<>|]+', "_", nombre_proyecto)
-    destino = CARPETA_REPORTES / f"reporte_{nombre_seguro}_{reporte.generado_en:%Y%m%d_%H%M%S}.json"
+    destino = CARPETA_REPORTES / nombre_archivo(nombre_proyecto, reporte.generado_en)
     with open(destino, "w", encoding="utf-8") as fh:
-        json.dump(reporte_a_dict(reporte), fh, indent=2, ensure_ascii=False)
+        json.dump(documento_reporte(reporte), fh, indent=2, ensure_ascii=False)
     reporte.archivo_json = str(destino)
     sesion.commit()
 
@@ -284,6 +315,26 @@ def _reporte_visible(sesion: Session, usuario: Usuario, codigo: str) -> Reporte:
     if reporte is None or not _puede_ver(usuario, reporte):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Reporte no encontrado.")
     return reporte
+
+
+@router.get("/reportes/{codigo}/exportar")
+def exportar(codigo: str, usuario: Usuario = Depends(usuario_actual), sesion: Session = Depends(obtener_sesion)):
+    reporte = _reporte_visible(sesion, usuario, codigo)
+    nombre = nombre_archivo(reporte.proyecto.nombre, reporte.generado_en)
+    return JSONResponse(
+        documento_reporte(reporte),
+        headers={"Content-Disposition": f'attachment; filename="{nombre}"'},
+    )
+
+
+@router.post("/reportes/vista")
+def vista_de_archivo(doc: ReporteArchivo, _: Usuario = Depends(usuario_actual)) -> dict:
+    """
+    Recibe el contenido de un .json de reporte y lo devuelve listo para mostrar.
+    No se guarda nada: sirve para revisar reportes de terceros o para recalcular
+    las métricas cuando el auditor cambia criterios de un reporte cargado.
+    """
+    return documento_a_vista(doc)
 
 
 @router.put("/reportes/{codigo}/criterios")

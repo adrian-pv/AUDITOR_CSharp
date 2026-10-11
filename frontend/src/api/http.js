@@ -74,9 +74,16 @@ function mensajeDeError(data) {
     return data.detail
       .map((d) => {
         const campo = d.loc?.[d.loc.length - 1];
+        // Reglas propias del backend: el texto ya está en español.
+        if (d.type === "value_error") return String(d.msg).replace(/^Value error, /, "");
+        // Campo anidado (p. ej. en un .json cargado): hallazgos[3].severidad
+        const ruta = (d.loc || [])
+          .filter((p) => p !== "body")
+          .map((p, i) => (typeof p === "number" ? `[${p}]` : i ? `.${p}` : p))
+          .join("");
         if (d.type === "string_too_short") return `'${campo}' es demasiado corto (mín. ${d.ctx?.min_length}).`;
         if (d.type === "string_pattern_mismatch") return `'${campo}' no tiene un formato válido.`;
-        return `${campo}: ${d.msg}`;
+        return `${ruta || campo}: ${d.msg}`;
       })
       .join(" ");
   }

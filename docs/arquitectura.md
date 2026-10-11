@@ -15,6 +15,7 @@
 | `backend/autenticacion/` | Inicio de sesión y control de acceso por rol (Administrador, Desarrollador, Auditor — Cap. IV, 4.2) |
 | `backend/api/` | Casos de uso del Cap. V expuestos como endpoints HTTP |
 | `frontend/src/components/LoginView.jsx` | Pantalla de inicio de sesión (Figura de interfaz pendiente del Cap. V) |
+| `backend/api/archivo_reporte.py` | Formato del reporte `.json` (descargar / cargar sin guardar); valida el archivo y recalcula las métricas |
 | `backend/tests/` | Validación del motor sin depender del SDK de .NET instalado, para reproducibilidad en cualquier entorno de desarrollo |
 
 ## Próximos pasos sugeridos
@@ -22,8 +23,9 @@
 1. ~~Exponer el motor como endpoint HTTP~~ — hecho (`server.py`).
 2. ~~Inicio de sesión, roles y base de datos~~ — hecho.
 3. ~~Cobertura OWASP Top 10 (2021 y 2025) y reglas editables por el Administrador~~ — hecho.
-4. Descargar el reporte como `.json` y cargar un `.json` de un tercero sin
-   volver a analizarlo ni guardarlo en la base de datos.
+4. ~~Descargar el reporte como `.json` y cargar un `.json` de un tercero sin
+   volver a analizarlo ni guardarlo en la base de datos~~ — hecho
+   (`backend/api/archivo_reporte.py`).
 5. Construir una `Compilation` con `SemanticModel` para resolver tipos y
    flujo de datos entre métodos (ver limitaciones).
 

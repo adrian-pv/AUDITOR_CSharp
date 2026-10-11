@@ -21,13 +21,15 @@ export default function AnalyzerView({ report, openFile, onSelectFile, onHallazg
   const { puedeEvaluar } = useAuth();
   const toast = useToast();
   const [errorEval, setErrorEval] = useState(null);
-  // Solo los reportes guardados en la BD tienen hallazgo_id (el de muestra no).
-  const evaluable = puedeEvaluar && report.reporte_id;
+  // Se evalúan los reportes guardados en la BD y los cargados desde .json (el de muestra no).
+  const evaluable = puedeEvaluar && (report.reporte_id || report.importado);
 
   const cambiarEstado = async (h, estado) => {
     setErrorEval(null);
     try {
-      await evaluarHallazgo(h.hallazgo_id, estado);
+      // Un reporte cargado desde .json no está en la BD: el cambio queda en pantalla
+      // y viaja en el archivo cuando se vuelve a descargar.
+      if (!report.importado) await evaluarHallazgo(h.hallazgo_id, estado);
       onHallazgoEvaluado?.(h.hallazgo_id, estado);
       toast(`${h.id} (línea ${h.linea}) marcado como ${estado}.`);
     } catch (err) {

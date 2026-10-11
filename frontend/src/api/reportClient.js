@@ -41,3 +41,35 @@ export const evaluarHallazgo = (hallazgoId, estado) =>
 /** El auditor guarda qué reglas (criterios) evaluar en un reporte. */
 export const guardarCriterios = (reporteId, evaluadas) =>
   api(`/api/reportes/${reporteId}/criterios`, { method: "PUT", body: { evaluadas } });
+
+/** Reporte guardado como archivo .json: todos los hallazgos y criterios. */
+export const exportarReporte = (reporteId) => api(`/api/reportes/${reporteId}/exportar`);
+
+/**
+ * Muestra el contenido de un .json de reporte (propio o de un tercero) sin
+ * volver a analizar ni guardar nada. El backend lo valida y recalcula métricas.
+ */
+export const vistaDeArchivo = (documento) => api("/api/reportes/vista", { method: "POST", body: documento });
+
+/** Nombre de archivo: reporte_<proyecto>_<AAAAMMDD_HHMMSS>.json */
+export function nombreArchivoReporte(proyecto, fechaIso) {
+  const f = fechaIso ? new Date(fechaIso) : new Date();
+  const d = isNaN(f) ? new Date() : f;
+  const p = (n) => String(n).padStart(2, "0");
+  const sello = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+  const limpio = (proyecto || "proyecto").replace(/[^A-Za-z0-9._-]+/g, "_").replace(/^_+|_+$/g, "") || "proyecto";
+  return `reporte_${limpio}_${sello}.json`;
+}
+
+/** Descarga un objeto como archivo .json desde el navegador. */
+export function descargarJson(objeto, nombre) {
+  const blob = new Blob([JSON.stringify(objeto, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nombre;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

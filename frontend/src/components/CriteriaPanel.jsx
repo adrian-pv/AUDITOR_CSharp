@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { guardarCriterios } from "../api/reportClient";
+import { guardarCriterios, vistaDeArchivo } from "../api/reportClient";
 import { useAuth } from "../auth/AuthContext";
 import Switch from "../ui/Switch";
 import { useToast } from "../ui/Toast";
@@ -21,7 +21,7 @@ export default function CriteriaPanel({ report, onActualizado }) {
   const [error, setError] = useState(null);
   const toast = useToast();
   const criterios = report.criterios || [];
-  if (!report.reporte_id || criterios.length === 0) return null;
+  if ((!report.reporte_id && !report.importado) || criterios.length === 0) return null;
 
   const evaluadas = criterios.filter((c) => c.evaluada).map((c) => c.codigo);
 
@@ -34,7 +34,16 @@ export default function CriteriaPanel({ report, onActualizado }) {
     setError(null);
     setGuardando(codigo);
     try {
-      onActualizado(await guardarCriterios(report.reporte_id, nuevas));
+      if (report.importado) {
+        // Reporte cargado desde .json: no se guarda; el backend solo recalcula las métricas.
+        const documento = {
+          ...report.documento,
+          criterios: report.documento.criterios.map((c) => ({ ...c, evaluada: nuevas.includes(c.codigo) })),
+        };
+        onActualizado(await vistaDeArchivo(documento));
+      } else {
+        onActualizado(await guardarCriterios(report.reporte_id, nuevas));
+      }
       toast(`Criterio ${codigo} ${nuevas.includes(codigo) ? "incluido en" : "excluido de"} la evaluación.`);
     } catch (err) {
       setError(err.message);

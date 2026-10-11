@@ -137,6 +137,21 @@ Cada análisis real que corres desde la interfaz también se guarda en
 `backend/reports/`, con nombre `reporte_<nombre-carpeta>_<AAAAMMDD_HHMMSS>.json`
 — así queda un historial de cada corrida sin que se sobrescriban entre sí.
 
+### Descargar y cargar reportes `.json`
+
+- **"Descargar .json"** (cabecera, en Panel General y Analizador) guarda el
+  reporte abierto como archivo: todos los hallazgos con su estado y los
+  criterios, indicando cuáles evaluó el auditor (`"formato": "AUDITOR_CSharp/reporte"`,
+  `"version": 1`).
+- **"Cargar .json"** abre un reporte desde un archivo (por ejemplo, el de un
+  tercero) **sin volver a analizar el código ni guardarlo en la base de datos**
+  (etiqueta azul "Archivo .json · … · sin guardar"). El auditor puede cambiar
+  criterios y estados de los hallazgos y volver a descargarlo con esos cambios.
+- El archivo cargado no se considera confiable: el backend lo valida
+  (`POST /api/reportes/vista`) y **recalcula las métricas** a partir de los
+  hallazgos, sin usar las que traiga el archivo. También se aceptan los `.json`
+  antiguos de `backend/reports/`.
+
 ## Reglas configurables y cobertura OWASP
 
 Las reglas **no están programadas una por una**: cada regla de la tabla
