@@ -98,6 +98,7 @@ def calcular_metricas(hallazgos: list[dict], loc_total: int, modulos: set[str] |
     score = round(sum(valores) / len(valores)) if valores else 100
 
     return {
+        "veredicto": calcular_veredicto(hallazgos),
         "stats": {
             "loc_total": loc_total,
             "vulnerabilidades": len(hallazgos),
@@ -105,4 +106,32 @@ def calcular_metricas(hallazgos: list[dict], loc_total: int, modulos: set[str] |
             "score_gobierno": score,
         },
         "cumplimiento_por_modulo": cumplimiento,
+    }
+
+
+def calcular_veredicto(hallazgos: list[dict]) -> dict:
+    """
+    Veredicto del reporte para su paso a producción, con los hallazgos de los
+    criterios evaluados (todos cuentan, sin importar su estado):
+
+      - APROBADO: sin hallazgos.
+      - APROBADO_CON_ADVERTENCIAS: solo advertencias o hallazgos de severidad baja.
+      - NO_APROBADO: al menos un hallazgo crítico.
+    """
+    conteo = {"CRÍTICO": 0, "ADVERTENCIA": 0, "BAJO": 0}
+    for h in hallazgos:
+        conteo[h["severidad"]] = conteo.get(h["severidad"], 0) + 1
+    if conteo["CRÍTICO"]:
+        estado = "NO_APROBADO"
+    elif conteo["ADVERTENCIA"] or conteo["BAJO"]:
+        estado = "APROBADO_CON_ADVERTENCIAS"
+    else:
+        estado = "APROBADO"
+    return {
+        "estado": estado,
+        "criticos": conteo["CRÍTICO"],
+        "advertencias": conteo["ADVERTENCIA"],
+        "bajos": conteo["BAJO"],
+        # reglas con hallazgos críticos, para mostrar qué impide la aprobación
+        "reglas_criticas": sorted({h["id"] for h in hallazgos if h["severidad"] == "CRÍTICO"}),
     }

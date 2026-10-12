@@ -45,7 +45,6 @@ function Cobertura({ titulo, categorias, reglas, campo }) {
 
 export default function RulesView() {
   const { esAdmin } = useAuth();
-  const [gatekeeper, setGatekeeper] = useState(true);
   const [reglas, setReglas] = useState([]);
   const [catalogo, setCatalogo] = useState(null);
   const [filtro, setFiltro] = useState("todos");
@@ -94,14 +93,6 @@ export default function RulesView() {
 
   return (
     <div className="p-8 max-w-6xl space-y-6">
-      <div className="border border-stone-200 rounded-lg bg-white p-4 flex items-center justify-between">
-        <div>
-          <p className="text-[13px] font-medium text-stone-900">Gatekeeper de gobierno de código</p>
-          <p className="text-[12px] text-stone-500 mt-0.5">Bloquea el commit o despliegue si la densidad de errores supera el umbral configurado.</p>
-        </div>
-        <Switch checked={gatekeeper} onChange={setGatekeeper} etiqueta="Gatekeeper de gobierno de código" />
-      </div>
-
       {catalogo && (
         <div className="border border-stone-200 rounded-lg bg-white p-4 space-y-3">
           <div className="flex items-baseline justify-between">

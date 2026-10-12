@@ -53,3 +53,16 @@ def test_patron_nuevo_se_detecta_sin_cambiar_codigo():
     assert run_engine(ast, [seg004])["hallazgos"] == []
     seg004.patrones.append("¬")
     assert [h["id"] for h in run_engine(ast, [seg004])["hallazgos"]] == ["SEG-004"]
+
+
+def test_veredicto_segun_severidad():
+    from engine.orchestrator import calcular_veredicto
+
+    def h(sev, cod="X-1"):
+        return {"id": cod, "severidad": sev}
+
+    assert calcular_veredicto([])["estado"] == "APROBADO"
+    v = calcular_veredicto([h("ADVERTENCIA"), h("BAJO")])
+    assert (v["estado"], v["advertencias"], v["bajos"]) == ("APROBADO_CON_ADVERTENCIAS", 1, 1)
+    v = calcular_veredicto([h("CRÍTICO", "SEG-002"), h("CRÍTICO", "SEG-001"), h("ADVERTENCIA")])
+    assert (v["estado"], v["criticos"], v["reglas_criticas"]) == ("NO_APROBADO", 2, ["SEG-001", "SEG-002"])

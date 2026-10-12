@@ -10,7 +10,8 @@
 | `backend/engine/detectores.py` | Detectores genéricos (plantillas) que interpretan los patrones de cada regla |
 | `frontend/src/components/RuleEditor.jsx` | Administración de reglas: edición de patrones y creación de reglas nuevas |
 | `backend/engine/orchestrator.py` | Cálculo de densidad de errores y score de gobierno (Anexo A1, panel general) |
-| `frontend/src/components/RulesView.jsx` | Filtro obligatorio de gobierno de código / Gatekeeper (Anexo A3) |
+| `frontend/src/components/RulesView.jsx` | Matriz de reglas y cobertura OWASP Top 10 (Anexo A3) |
+| `backend/engine/orchestrator.py` (`calcular_veredicto`), `frontend/src/components/VeredictoBanner.jsx` | Filtro previo a producción: veredicto Aprobado / Aprobado con advertencias / No aprobado según la severidad de los hallazgos |
 | `backend/persistencia/modelos.py`, `backend/sql/esquema_postgresql.sql` | Modelo Entidad-Relación (Cap. V, Figuras 12 y 13): usuario, proyecto, reporte, hallazgo, regla en PostgreSQL |
 | `backend/autenticacion/` | Inicio de sesión y control de acceso por rol (Administrador, Desarrollador, Auditor — Cap. IV, 4.2) |
 | `backend/api/` | Casos de uso del Cap. V expuestos como endpoints HTTP |

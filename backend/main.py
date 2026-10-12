@@ -41,6 +41,13 @@ def main() -> None:
     reporte = run_engine(ast_files)
     destino = write_report(reporte, args.out)
     print(f"Reporte generado en {destino}")
+    v = reporte["veredicto"]
+    textos = {
+        "APROBADO": "APROBADO: sin hallazgos.",
+        "APROBADO_CON_ADVERTENCIAS": f"APROBADO CON ADVERTENCIAS: {v['advertencias']} advertencia(s), {v['bajos']} de severidad baja.",
+        "NO_APROBADO": f"NO APROBADO: {v['criticos']} hallazgo(s) crítico(s) en {', '.join(v['reglas_criticas'])}.",
+    }
+    print(textos[v["estado"]])
 
 
 if __name__ == "__main__":

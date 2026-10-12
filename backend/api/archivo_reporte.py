@@ -134,6 +134,7 @@ def documento_a_vista(doc: ReporteArchivo) -> dict:
         "proyecto": doc.proyecto,
         "generado_en": doc.generado_en,
         "stats": metricas["stats"],
+        "veredicto": metricas["veredicto"],
         "hallazgos": hallazgos,
         "cumplimiento_por_modulo": metricas["cumplimiento_por_modulo"],
         "criterios": [

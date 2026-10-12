@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import CriteriaPanel from "./CriteriaPanel";
+import VeredictoBanner from "./VeredictoBanner";
 import useContador from "../ui/useContador";
 
 const SEVERITY_DOT = {
@@ -50,6 +51,8 @@ export default function DashboardView({ report, onOpenFile, onReporteActualizado
 
   return (
     <div className="p-8 max-w-5xl space-y-8">
+      <VeredictoBanner report={report} />
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-stone-200 border border-stone-200 rounded-lg overflow-hidden">
         {statCards.map((s, i) => (
           <div key={s.label} className="bg-white p-4 animate-fade-up" style={{ animationDelay: `${i * 50}ms` }}>

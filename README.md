@@ -137,6 +137,20 @@ Cada análisis real que corres desde la interfaz también se guarda en
 `backend/reports/`, con nombre `reporte_<nombre-carpeta>_<AAAAMMDD_HHMMSS>.json`
 — así queda un historial de cada corrida sin que se sobrescriban entre sí.
 
+### Veredicto para producción
+
+Cada reporte muestra un veredicto calculado con los hallazgos de los criterios
+evaluados (todos cuentan, sin importar su estado):
+
+- **Aprobado** (verde): sin hallazgos.
+- **Aprobado con advertencias** (amarillo): solo advertencias o hallazgos de
+  severidad baja; conviene revisarlos, pero no impiden el paso a producción.
+- **No aprobado** (rojo): al menos un hallazgo crítico; se listan las reglas
+  que lo impiden.
+
+El veredicto aparece en el Panel General, en el Historial, en el `.json`
+descargado y al final de la salida de `python main.py`.
+
 ### Descargar y cargar reportes `.json`
 
 - **"Descargar .json"** (cabecera, en Panel General y Analizador) guarda el

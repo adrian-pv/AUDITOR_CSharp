@@ -187,6 +187,12 @@ def test_auditor_elige_criterios_y_se_recalculan_las_metricas(cliente):
     assert nuevo["stats"]["vulnerabilidades"] == esperado
     assert set(nuevo["cumplimiento_por_modulo"]) == {"Módulo 1: Seguridad", "Módulo 3: Memoria"}
     assert {c["codigo"] for c in nuevo["criterios"] if c["evaluada"]} == {"SEG-001", "MEM-004"}
+    # SEG-001 es crítico: el reporte completo y el filtrado no se aprueban; sin SEG-001, solo quedan advertencias
+    assert rep["veredicto"]["estado"] == "NO_APROBADO"
+    assert nuevo["veredicto"]["estado"] == "NO_APROBADO" and nuevo["veredicto"]["reglas_criticas"] == ["SEG-001"]
+    solo_mem = cliente.put(url, headers=auditor, json={"evaluadas": ["MEM-004"]}).json()
+    assert solo_mem["veredicto"]["estado"] == "APROBADO_CON_ADVERTENCIAS"
+    cliente.put(url, headers=auditor, json={"evaluadas": ["SEG-001", "MEM-004"]})
 
     # La selección queda guardada: el desarrollador también la ve
     visto = cliente.get(f"/api/reportes/{rep['reporte_id']}", headers=dev).json()

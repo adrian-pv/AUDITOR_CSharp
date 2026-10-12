@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { History } from "lucide-react";
 import { listarReportes } from "../api/reportClient";
 import { useAuth } from "../auth/AuthContext";
+import { VEREDICTO } from "./VeredictoBanner";
 
 export function formatearFecha(iso) {
   if (!iso) return "";
@@ -72,6 +73,7 @@ export default function HistoryView({ reporteActual, onAbrir }) {
                 <th className="px-4 py-2.5 font-medium text-right">Criterios</th>
                 <th className="px-4 py-2.5 font-medium text-right">Hallazgos</th>
                 <th className="px-4 py-2.5 font-medium text-right">Score</th>
+                <th className="px-4 py-2.5 font-medium">Veredicto</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-200">
@@ -92,6 +94,13 @@ export default function HistoryView({ reporteActual, onAbrir }) {
                     </td>
                     <td className="px-4 py-2.5 text-right font-mono text-red-700">{r.vulnerabilidades}</td>
                     <td className="px-4 py-2.5 text-right font-mono text-stone-800">{r.score_gobierno}%</td>
+                    <td className="px-4 py-2.5">
+                      {VEREDICTO[r.veredicto] && (
+                        <span className={`whitespace-nowrap text-[11px] px-1.5 py-0.5 rounded border ${VEREDICTO[r.veredicto].insignia}`}>
+                          {VEREDICTO[r.veredicto].titulo}
+                        </span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}

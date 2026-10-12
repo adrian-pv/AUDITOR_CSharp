@@ -111,6 +111,7 @@ def reporte_a_dict(r: Reporte) -> dict:
         "proyecto": r.proyecto.nombre,
         "generado_en": _fecha(r),
         "stats": metricas["stats"],
+        "veredicto": metricas["veredicto"],
         "hallazgos": hallazgos,
         "cumplimiento_por_modulo": metricas["cumplimiento_por_modulo"],
         "criterios": [
@@ -142,6 +143,7 @@ def documento_reporte(r: Reporte) -> dict:
         "generado_en": _fecha(r),
         "loc_total": r.loc_total,
         "stats": vista["stats"],
+        "veredicto": vista["veredicto"],
         "cumplimiento_por_modulo": vista["cumplimiento_por_modulo"],
         "criterios": [{k: v for k, v in c.items() if k != "hallazgos"} for c in vista["criterios"]],
         "hallazgos": [{k: v for k, v in _hallazgo_a_dict(h).items() if k != "hallazgo_id"} for h in r.hallazgos],
@@ -294,6 +296,7 @@ def historial(usuario: Usuario = Depends(usuario_actual), sesion: Session = Depe
                 "generado_por": r.usuario.nombre,
                 "vulnerabilidades": datos["stats"]["vulnerabilidades"],
                 "score_gobierno": datos["stats"]["score_gobierno"],
+                "veredicto": datos["veredicto"]["estado"],
                 "criterios_evaluados": sum(1 for c in datos["criterios"] if c["evaluada"]),
                 "criterios_total": len(datos["criterios"]),
             }
