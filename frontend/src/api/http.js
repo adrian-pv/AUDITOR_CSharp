@@ -88,6 +88,18 @@ function mensajeDeError(data) {
           .filter((p) => p !== "body")
           .map((p, i) => (typeof p === "number" ? `[${p}]` : i ? `.${p}` : p))
           .join("");
+        // Mensajes de validación de Pydantic traducidos (p. ej. al cargar un .json de un tercero)
+        const donde = ruta || campo;
+        if (d.type === "literal_error") return `${donde}: valor no permitido (use ${String(d.ctx?.expected || "").replaceAll(" or ", " o ")}).`;
+        if (d.type === "missing") return `${donde}: es obligatorio.`;
+        if (d.type === "greater_than_equal") return `${donde}: debe ser mayor o igual a ${d.ctx?.ge}.`;
+        if (d.type === "less_than_equal") return `${donde}: debe ser menor o igual a ${d.ctx?.le}.`;
+        if (d.type === "int_parsing" || d.type === "int_type") return `${donde}: debe ser un número entero.`;
+        if (d.type === "string_type") return `${donde}: debe ser texto.`;
+        if (d.type === "list_type") return `${donde}: debe ser una lista.`;
+        if (d.type === "bool_type" || d.type === "bool_parsing") return `${donde}: debe ser verdadero o falso.`;
+        if (d.type === "string_too_long") return `${donde}: es demasiado largo (máx. ${d.ctx?.max_length}).`;
+        if (d.type === "too_long") return `${donde}: tiene demasiados elementos.`;
         if (d.type === "string_too_short") return `'${campo}' es demasiado corto (mín. ${d.ctx?.min_length}).`;
         if (d.type === "string_pattern_mismatch") return `'${campo}' no tiene un formato válido.`;
         return `${ruta || campo}: ${d.msg}`;
